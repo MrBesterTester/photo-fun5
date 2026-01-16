@@ -1,0 +1,33 @@
+# Photo Fun Project Rules
+
+## Project Overview
+This is a React + Vite web application for AI-powered photo editing using Google's Gemini API.
+
+## Tech Stack
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS (via CDN)
+- Google Gemini API (@google/genai)
+
+## Code Style
+- Use TypeScript for all new files
+- Use functional components with hooks
+- Follow existing component structure
+- Use Tailwind CSS classes for styling
+
+## Environment Variables
+- API keys should be stored in `.env.local` (gitignored)
+- Use `GEMINI_API_KEY` for the Gemini API key
+- Never commit `.env.local` or actual API keys
+
+## File Organization
+- Components in `components/` directory
+- Services in `services/` directory
+- Types in `types.ts`
+- Constants in `constants.ts`
+
+## Important Notes
+- The app uses `import.meta.env.VITE_GEMINI_API_KEY` or `process.env.GEMINI_API_KEY` for API key access
+- Vite config handles environment variable exposure via `define`
+- The app is designed to work without AI Studio dependencies
