@@ -5,9 +5,10 @@ interface ImagePreviewProps {
   currentImage: string;
   isProcessing: boolean;
   onReset: () => void;
+  onReplaceImage?: () => void;
 }
 
-export const ImagePreview: React.FC<ImagePreviewProps> = ({ originalImage, currentImage, isProcessing, onReset }) => {
+export const ImagePreview: React.FC<ImagePreviewProps> = ({ originalImage, currentImage, isProcessing, onReset, onReplaceImage }) => {
   const [comparing, setComparing] = useState(false);
 
   const handleDownload = () => {
@@ -37,12 +38,22 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({ originalImage, curre
 
         {!isProcessing && (
            <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex justify-between items-end">
-              <button 
-                onClick={onReset}
-                className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-white bg-red-500/20 hover:bg-red-500/40 border border-red-500/50 rounded-lg backdrop-blur-md transition-all"
-              >
-                Reset
-              </button>
+              <div className="flex gap-2">
+                <button 
+                  onClick={onReset}
+                  className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-white bg-red-500/20 hover:bg-red-500/40 border border-red-500/50 rounded-lg backdrop-blur-md transition-all"
+                >
+                  Reset
+                </button>
+                {onReplaceImage && (
+                  <button 
+                    onClick={onReplaceImage}
+                    className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-white bg-blue-500/20 hover:bg-blue-500/40 border border-blue-500/50 rounded-lg backdrop-blur-md transition-all"
+                  >
+                    Replace Image
+                  </button>
+                )}
+              </div>
               
               <div className="flex gap-3">
                 {currentImage !== originalImage && (

@@ -6,8 +6,10 @@ import { ChatInterface } from './components/ChatInterface';
 import { Message, Role } from './types';
 import { editImageWithGemini } from './services/geminiService';
 import { ERROR_MESSAGES } from './constants';
+import { loadImageAsBase64 } from './utils/imageLoader';
 
 const MAX_SESSION_REQUESTS = 10;
+const DEFAULT_IMAGE_PATH = '/images/default-portrait.jpg';
 
 const App: React.FC = () => {
   const [apiKeyVerified, setApiKeyVerified] = useState(false);
@@ -16,6 +18,7 @@ const App: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [requestCount, setRequestCount] = useState(0);
+  const [isLoadingDefault, setIsLoadingDefault] = useState(true);
 
   useEffect(() => {
     // Check if API key is available from environment variables
@@ -25,6 +28,30 @@ const App: React.FC = () => {
     } else {
       setApiKeyVerified(false);
     }
+  }, []);
+
+  // Load default image on mount
+  useEffect(() => {
+    const loadDefaultImage = async () => {
+      try {
+        const base64Image = await loadImageAsBase64(DEFAULT_IMAGE_PATH);
+        setOriginalImage(base64Image);
+        setCurrentImage(base64Image);
+        setMessages([{
+          id: 'init',
+          role: Role.MODEL,
+          text: "Awesome photo! Select a style or type your request below.",
+          timestamp: Date.now()
+        }]);
+      } catch (error) {
+        console.warn('Could not load default image, user can upload their own:', error);
+        // If default image fails to load, just show the uploader
+      } finally {
+        setIsLoadingDefault(false);
+      }
+    };
+
+    loadDefaultImage();
   }, []);
 
   const handleSelectKey = async () => {
@@ -41,6 +68,13 @@ const App: React.FC = () => {
       text: "Awesome photo! Select a style or type your request below.",
       timestamp: Date.now()
     }]);
+  }, []);
+
+  const handleReplaceImage = useCallback(() => {
+    // Reset to show uploader, allowing user to upload a new image
+    setOriginalImage(null);
+    setCurrentImage(null);
+    setMessages([]);
   }, []);
 
   const handleReset = useCallback(() => {
@@ -78,7 +112,14 @@ const App: React.FC = () => {
       <Header onChangeKey={handleSelectKey} />
       <main className="flex-1 overflow-hidden p-4 md:p-6 lg:p-10 flex flex-col lg:flex-row gap-6">
           <div className="flex-1 min-h-[400px] lg:h-full bg-slate-900 rounded-3xl overflow-hidden border border-white/5">
-            {!currentImage ? (
+            {isLoadingDefault ? (
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4 mx-auto"></div>
+                  <p className="text-slate-400">Loading default image...</p>
+                </div>
+              </div>
+            ) : !currentImage ? (
               <ImageUploader onImageSelect={handleImageSelect} />
             ) : (
               <ImagePreview 
@@ -86,6 +127,7 @@ const App: React.FC = () => {
                 currentImage={currentImage}
                 isProcessing={isProcessing}
                 onReset={handleReset}
+                onReplaceImage={handleReplaceImage}
               />
             )}
           </div>
