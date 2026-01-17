@@ -144,57 +144,31 @@ This will send: `X-TFY-METADATA: {"project_id":"photo-fun-app"}` with every requ
 
 ### Option B: Use Formal Project ID (If You Have One)
 
-If you already have a formal project (ML resource) in TrueFoundry and want to use its Project ID:
-
-### Option A: Use an Existing Project
-
-If you already have a project in TrueFoundry:
+If you already have a formal project (ML resource) in TrueFoundry and want to use its Project ID with the `x-tfy-project-id` header:
 
 1. Log into [TrueFoundry Dashboard](https://www.truefoundry.com/login)
 2. Go to **Platform → Projects** (or your workspace's project list)
 3. Select the project you want to use for this app
-4. The Project ID is typically shown in:
-   - **Project Settings** or **Project Details** page
-   - The browser URL when viewing the project (e.g., `.../projects/{project-id}/...`)
-   - **Project Overview** or **Configuration** section
+4. Find the Project ID:
+   - **Project Settings** or **Project Details** page - The Project ID should be displayed there (may have a "Copy" button)
+   - **URL Inspection** - When viewing your project, check the browser URL. The Project ID often appears in the path: `.../projects/{project-id}/...` or as a parameter: `?projectId=...`
 5. Copy the Project ID (usually a UUID format like `abc123-def456-...`)
+6. Set it as `TRUEFOUNDRY_PROJECT_ID` in your `.env.local`
 
-### Option B: Create a New Project
+**Note**: Option A (custom metadata) is recommended as it doesn't require creating a formal project and works perfectly for cost control.
 
-If you don't have a project yet or want to create one specifically for this app:
+### Setting Up Budget Limits with Metadata
 
-1. Log into [TrueFoundry Dashboard](https://www.truefoundry.com/login)
-2. Go to **Platform → Projects** (or your workspace)
-3. Click **"Create Project"** or **"New Project"** button
-4. Enter a project name (e.g., "Photo Fun App" or "Photo Editing Service")
-5. Optionally add a description
-6. Click **"Create"** or **"Save"**
-7. After creation, the Project ID will be displayed - copy it immediately
-   - It's usually shown on the project details page
-   - Or in the URL: `.../projects/{project-id}/...`
-   - Or in **Project Settings → Project Details**
+Once you've set `TRUEFOUNDRY_METADATA_PROJECT_ID`, you can configure budget limits in TrueFoundry:
 
-### Finding the Project ID After Creation/Selection
+1. Go to **AI Gateway → Budget Controls** (or **Budget Limiting**)
+2. Create a budget limit
+3. Set `budget_applies_per: ['metadata.project_id']` to apply budgets per your project identifier
+4. This allows you to set spending limits per project without needing formal ML resources
 
-Once you have a project, find its ID using one of these methods:
+See [TrueFoundry Budget Limiting Docs](https://truefoundry.com/docs/ai-gateway/budgetlimiting) for details.
 
-**Method 1: Project Details Page**
-- Go to your project → **Settings** → **Project Details**
-- The Project ID should be displayed there (may have a "Copy" button)
-
-**Method 2: URL Inspection**
-- When viewing your project, check the browser URL
-- The Project ID often appears in the path: `.../projects/{project-id}/...` or as a parameter: `?projectId=...`
-
-**Method 3: AI Gateway Configuration**
-- Go to **AI Gateway** section
-- If you've configured models for this project, the Project ID may appear in code snippets or configuration
-
-**Method 4: API/Code Snippets**
-- In **AI Gateway → Quick Start** or **Playground**
-- When you select your project, code snippets may include the Project ID
-
-### If You Don't Want to Create a Project
+### If You Skip Project Tracking
 
 **You can skip this entirely!** The Project ID is completely optional. Your app will work perfectly without it. The `x-tfy-project-id` header is only added if you configure `TRUEFOUNDRY_PROJECT_ID` in your `.env.local` file.
 
