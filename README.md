@@ -95,3 +95,5 @@ photo-fun5/
 ## License
 
 This project was originally created in Google AI Studio and has been adapted for local development.
+
+
