@@ -76,7 +76,15 @@ photo-fun5/
 
 ## Environment Variables
 
-- `GEMINI_API_KEY` - Your Google Gemini API key (required)
+### Option 1: Direct Google Gemini API
+- `GEMINI_API_KEY` - Your Google Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
+
+### Option 2: TrueFoundry AI Gateway (Recommended)
+- `TRUEFOUNDRY_BASE_URL` - Your TrueFoundry base URL (e.g., `https://api.truefoundry.com`)
+- `TRUEFOUNDRY_API_KEY` - Your TrueFoundry Personal Access Token
+- `TRUEFOUNDRY_MODEL` - Model identifier (e.g., `sak-consulting:google-gemini:google-gemini`)
+
+**Note**: If both TrueFoundry and Gemini API keys are set, TrueFoundry will be used. See [TrueFoundry Setup Guide](./docs/TRUEFOUNDRY_SETUP.md) for detailed instructions.
 
 ## Troubleshooting
 
