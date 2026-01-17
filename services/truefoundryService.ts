@@ -15,18 +15,23 @@ interface TrueFoundryConfig {
   baseUrl: string;
   apiKey: string;
   model: string;
+  projectId?: string; // For x-tfy-project-id header (if using formal project)
+  metadataProjectId?: string; // For X-TFY-METADATA header (simpler, no formal project needed)
 }
 
 const getTrueFoundryConfig = (): TrueFoundryConfig | null => {
   const baseUrl = import.meta.env.VITE_TRUEFOUNDRY_BASE_URL || (process.env.TRUEFOUNDRY_BASE_URL as string);
   const apiKey = import.meta.env.VITE_TRUEFOUNDRY_API_KEY || (process.env.TRUEFOUNDRY_API_KEY as string);
   const model = import.meta.env.VITE_TRUEFOUNDRY_MODEL || (process.env.TRUEFOUNDRY_MODEL as string) || 'sak-consulting:google-gemini:google-gemini';
+  const projectId = import.meta.env.VITE_TRUEFOUNDRY_PROJECT_ID || (process.env.TRUEFOUNDRY_PROJECT_ID as string);
+  // Use metadata project ID if set, otherwise fall back to projectId for backward compatibility
+  const metadataProjectId = import.meta.env.VITE_TRUEFOUNDRY_METADATA_PROJECT_ID || (process.env.TRUEFOUNDRY_METADATA_PROJECT_ID as string) || projectId;
 
   if (!baseUrl || !apiKey) {
     return null;
   }
 
-  return { baseUrl, apiKey, model };
+  return { baseUrl, apiKey, model, projectId, metadataProjectId };
 };
 
 /**
@@ -63,12 +68,28 @@ export const editImageWithTrueFoundry = async (
     // The endpoint is typically: /api/llm/api/inference/openai/v1/chat/completions
     const endpoint = `${config.baseUrl.replace(/\/$/, '')}/api/llm/api/inference/openai/v1/chat/completions`;
 
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${config.apiKey}`,
+      'Content-Type': 'application/json',
+    };
+
+    // Add project ID header if configured (for formal project tracking)
+    if (config.projectId) {
+      headers['x-tfy-project-id'] = config.projectId;
+    }
+
+    // Add custom metadata with project_id for cost control and observability
+    // This doesn't require a formal project - just a string identifier
+    // Can be used with budget limiting: budget_applies_per: ['metadata.project_id']
+    if (config.metadataProjectId) {
+      headers['X-TFY-METADATA'] = JSON.stringify({
+        project_id: config.metadataProjectId
+      });
+    }
+
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${config.apiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         model: config.model,
         messages: [
@@ -124,12 +145,26 @@ export const editImageWithTrueFoundry = async (
       // Try the image generation endpoint
       const imageEndpoint = `${config.baseUrl.replace(/\/$/, '')}/api/llm/api/inference/openai/v1/images/edits`;
       
+      const imageHeaders: Record<string, string> = {
+        'Authorization': `Bearer ${config.apiKey}`,
+        'Content-Type': 'multipart/form-data',
+      };
+
+      // Add project ID header if configured (for formal project tracking)
+      if (config.projectId) {
+        imageHeaders['x-tfy-project-id'] = config.projectId;
+      }
+
+      // Add custom metadata with project_id for cost control
+      if (config.metadataProjectId) {
+        imageHeaders['X-TFY-METADATA'] = JSON.stringify({
+          project_id: config.metadataProjectId
+        });
+      }
+
       const imageResponse = await fetch(imageEndpoint, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${config.apiKey}`,
-          'Content-Type': 'multipart/form-data',
-        },
+        headers: imageHeaders,
         body: JSON.stringify({
           model: config.model,
           prompt: enforcementPrompt,
@@ -186,12 +221,28 @@ export const chatWithTrueFoundry = async (
       }
     ];
 
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${config.apiKey}`,
+      'Content-Type': 'application/json',
+    };
+
+    // Add project ID header if configured (for formal project tracking)
+    if (config.projectId) {
+      headers['x-tfy-project-id'] = config.projectId;
+    }
+
+    // Add custom metadata with project_id for cost control and observability
+    // This doesn't require a formal project - just a string identifier
+    // Can be used with budget limiting: budget_applies_per: ['metadata.project_id']
+    if (config.metadataProjectId) {
+      headers['X-TFY-METADATA'] = JSON.stringify({
+        project_id: config.metadataProjectId
+      });
+    }
+
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${config.apiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         model: config.model,
         messages: messages,

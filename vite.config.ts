@@ -17,12 +17,16 @@ export default defineConfig(({ mode }) => {
         'import.meta.env.VITE_TRUEFOUNDRY_BASE_URL': JSON.stringify(env.TRUEFOUNDRY_BASE_URL),
         'import.meta.env.VITE_TRUEFOUNDRY_API_KEY': JSON.stringify(env.TRUEFOUNDRY_API_KEY),
         'import.meta.env.VITE_TRUEFOUNDRY_MODEL': JSON.stringify(env.TRUEFOUNDRY_MODEL),
+        'import.meta.env.VITE_TRUEFOUNDRY_PROJECT_ID': JSON.stringify(env.TRUEFOUNDRY_PROJECT_ID),
+        'import.meta.env.VITE_TRUEFOUNDRY_METADATA_PROJECT_ID': JSON.stringify(env.TRUEFOUNDRY_METADATA_PROJECT_ID),
         // Also support process.env for backward compatibility
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.TRUEFOUNDRY_BASE_URL': JSON.stringify(env.TRUEFOUNDRY_BASE_URL),
         'process.env.TRUEFOUNDRY_API_KEY': JSON.stringify(env.TRUEFOUNDRY_API_KEY),
-        'process.env.TRUEFOUNDRY_MODEL': JSON.stringify(env.TRUEFOUNDRY_MODEL)
+        'process.env.TRUEFOUNDRY_MODEL': JSON.stringify(env.TRUEFOUNDRY_MODEL),
+        'process.env.TRUEFOUNDRY_PROJECT_ID': JSON.stringify(env.TRUEFOUNDRY_PROJECT_ID),
+        'process.env.TRUEFOUNDRY_METADATA_PROJECT_ID': JSON.stringify(env.TRUEFOUNDRY_METADATA_PROJECT_ID)
       },
       resolve: {
         alias: {
