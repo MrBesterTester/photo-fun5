@@ -84,7 +84,7 @@ photo-fun5/
 - `TRUEFOUNDRY_API_KEY` - Your TrueFoundry Personal Access Token
 - `TRUEFOUNDRY_MODEL` - Model identifier (e.g., `sak-consulting:google-gemini:google-gemini`)
 
-**Note**: If both TrueFoundry and Gemini API keys are set, TrueFoundry will be used. See [TrueFoundry Setup Guide](./docs/TRUEFOUNDRY_SETUP.md) for detailed instructions.
+**Note**: If both TrueFoundry and Gemini API keys are set, TrueFoundry will be used. See [TrueFoundry Setup Guide](./docs/TRUEFOUNDRY_SETUP.md) for detailed instructions, including where to find and create your API key.
 
 ## Troubleshooting
 
