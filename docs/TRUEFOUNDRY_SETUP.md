@@ -110,15 +110,14 @@ If you have admin privileges and want better security for production:
 
 Your model identifier format is: `{workspace}:{provider}:{model-name}`
 
-Based on your endpoint `sak-consulting:google-gemini:google-gemini`:
-- **Workspace**: `sak-consulting`
-- **Provider**: `google-gemini`
-- **Model**: `google-gemini`
+**For Photo Fun (image editing):** use a model that **outputs** images (e.g. `gemini-2.5-flash-image`), not a chat-only model (e.g. `gemini-2.5-flash`). In **AI Gateway → Models**, pick one whose name includes `-image` or type "Image"/"Generation".
 
-You can verify this in the TrueFoundry dashboard:
+Example: `sak-consulting:google-gemini:gemini-2.5-flash-image`
+
+You can verify in the TrueFoundry dashboard:
 1. Go to **AI Gateway → Models**
-2. Find your Gemini model
-3. The model identifier should match the format above
+2. Find a Gemini **image** model (e.g. `gemini-2.5-flash-image`)
+3. Copy its full model identifier
 
 ## Step 3.5: Configure Project Tracking for Cost Control (Optional)
 
@@ -218,6 +217,8 @@ After updating `.env.local`:
 npm run dev
 ```
 
+**Stopping the dev server:** In the **terminal** where `npm run dev` is running, press **Ctrl+C**. Closing the browser does not stop the server. If the port stays in use, either stop that process or use another port, e.g. `npm run dev -- --port 3001`.
+
 ## Troubleshooting
 
 ### "TrueFoundry configuration not found"
@@ -232,6 +233,11 @@ npm run dev
 ### "Model not found"
 - Verify your `TRUEFOUNDRY_MODEL` matches exactly what's shown in the TrueFoundry dashboard
 - Check that the model is enabled and available in your workspace
+
+### "500 Internal Server Error" (often with empty body)
+- **Use an image-generation model, not just "chat"**: Image editing requires a model that can **output** images (e.g. `gemini-2.5-flash-image`, `gemini-2.0-flash-preview-image`). Chat models like `gemini-2.5-flash` accept image **input** (vision) but only return **text**; they can cause 500s when asked for an edited image. In **AI Gateway -> Models**, pick a model whose name includes `-image` or type is "Image" / "Generation", and set `TRUEFOUNDRY_MODEL` to its full id (e.g. `sak-consulting:google-gemini:gemini-2.5-flash-image`).
+- **Check the model id format**: It must match your workspace’s format, e.g. `{workspace}:{provider}:{model-name}`. Copy the exact value from the Models list.
+- **Image size**: Very large images can cause timeouts or 500s. The app uses `detail: "low"` for image_url to reduce tokens; if you still see 500, try a smaller source image.
 
 ### Base URL Issues
 - Try both `https://api.truefoundry.com` and `https://sak-consulting.api.truefoundry.com`

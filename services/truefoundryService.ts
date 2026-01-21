@@ -34,6 +34,10 @@ const getTrueFoundryConfig = (): TrueFoundryConfig | null => {
   return { baseUrl, apiKey, model, projectId, metadataProjectId };
 };
 
+/** In dev, use /tfy proxy (Vite) to avoid CORS. In prod, use TRUEFOUNDRY_BASE_URL. */
+const getApiBase = (baseUrl: string) =>
+  import.meta.env.DEV ? '/tfy' : baseUrl.replace(/\/$/, '');
+
 /**
  * Edit image using TrueFoundry AI Gateway (Gemini proxy)
  */
@@ -63,10 +67,12 @@ export const editImageWithTrueFoundry = async (
     USER INSTRUCTION: ${prompt}
   `;
 
+  const apiBase = getApiBase(config.baseUrl);
+
   try {
     // TrueFoundry uses OpenAI-compatible API format for Gemini
-    // The endpoint is typically: /api/llm/api/inference/openai/v1/chat/completions
-    const endpoint = `${config.baseUrl.replace(/\/$/, '')}/api/llm/api/inference/openai/v1/chat/completions`;
+    // In dev, /tfy is proxied to api.truefoundry.com to avoid CORS
+    const endpoint = `${apiBase}/api/llm/api/inference/openai/v1/chat/completions`;
 
     const headers: Record<string, string> = {
       'Authorization': `Bearer ${config.apiKey}`,
@@ -100,7 +106,8 @@ export const editImageWithTrueFoundry = async (
               {
                 type: 'image_url',
                 image_url: {
-                  url: `data:${mimeType};base64,${cleanBase64}`
+                  url: `data:${mimeType};base64,${cleanBase64}`,
+                  detail: 'low'  // reduces size/tokens; use 'high' if quality suffers
                 }
               }
             ]
@@ -114,7 +121,11 @@ export const editImageWithTrueFoundry = async (
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`TrueFoundry API error: ${response.status} ${response.statusText} - ${errorText}`);
+      const body = errorText.trim() || '(no response body)';
+      const hint = response.status === 500
+        ? ' — For image editing, set TRUEFOUNDRY_MODEL to an image model (e.g. gemini-2.5-flash-image), not a chat-only model (e.g. gemini-2.5-flash). See AI Gateway → Models.'
+        : '';
+      throw new Error(`TrueFoundry API error: ${response.status} ${response.statusText} - ${body}${hint}`);
     }
 
     const data = await response.json();
@@ -142,8 +153,7 @@ export const editImageWithTrueFoundry = async (
 
     // If no image in response, try alternative endpoint for image generation
     if (!generatedImage && !generatedText) {
-      // Try the image generation endpoint
-      const imageEndpoint = `${config.baseUrl.replace(/\/$/, '')}/api/llm/api/inference/openai/v1/images/edits`;
+      const imageEndpoint = `${apiBase}/api/llm/api/inference/openai/v1/images/edits`;
       
       const imageHeaders: Record<string, string> = {
         'Authorization': `Bearer ${config.apiKey}`,
@@ -207,8 +217,10 @@ export const chatWithTrueFoundry = async (
     throw new Error('TrueFoundry configuration not found. Please set TRUEFOUNDRY_BASE_URL and TRUEFOUNDRY_API_KEY in .env.local');
   }
 
+  const apiBase = getApiBase(config.baseUrl);
+
   try {
-    const endpoint = `${config.baseUrl.replace(/\/$/, '')}/api/llm/api/inference/openai/v1/chat/completions`;
+    const endpoint = `${apiBase}/api/llm/api/inference/openai/v1/chat/completions`;
 
     const messages = [
       ...history.map(h => ({
@@ -253,7 +265,8 @@ export const chatWithTrueFoundry = async (
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`TrueFoundry API error: ${response.status} ${response.statusText} - ${errorText}`);
+      const body = errorText.trim() || '(no response body)';
+      throw new Error(`TrueFoundry API error: ${response.status} ${response.statusText} - ${body}`);
     }
 
     const data = await response.json();

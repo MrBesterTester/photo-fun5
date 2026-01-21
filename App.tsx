@@ -21,13 +21,15 @@ const App: React.FC = () => {
   const [isLoadingDefault, setIsLoadingDefault] = useState(true);
 
   useEffect(() => {
-    // Check if API key is available from environment variables
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || (process.env.GEMINI_API_KEY as string);
-    if (apiKey && apiKey.trim() !== '' && apiKey !== 'your_gemini_api_key_here') {
-      setApiKeyVerified(true);
-    } else {
-      setApiKeyVerified(false);
-    }
+    // Check if API is available: TrueFoundry (Option A) or direct Gemini
+    const geminiKey = import.meta.env.VITE_GEMINI_API_KEY || (process.env.GEMINI_API_KEY as string);
+    const tfBase = import.meta.env.VITE_TRUEFOUNDRY_BASE_URL || (process.env.TRUEFOUNDRY_BASE_URL as string);
+    const tfKey = import.meta.env.VITE_TRUEFOUNDRY_API_KEY || (process.env.TRUEFOUNDRY_API_KEY as string);
+
+    const hasGemini = geminiKey && geminiKey.trim() !== '' && geminiKey !== 'your_gemini_api_key_here';
+    const hasTrueFoundry = tfBase && tfKey && tfKey.trim() !== '';
+
+    setApiKeyVerified(hasGemini || hasTrueFoundry);
   }, []);
 
   // Load default image on mount
@@ -55,8 +57,16 @@ const App: React.FC = () => {
   }, []);
 
   const handleSelectKey = async () => {
-    // In local development, show instructions
-    alert('To set your API key:\n1. Create a .env.local file in the project root\n2. Add: GEMINI_API_KEY=your_key_here\n3. Restart the dev server\n\nGet your key from: https://aistudio.google.com/app/apikey');
+    alert(
+      'To set your API:\n\n' +
+      'Option A – TrueFoundry (recommended):\n' +
+      '1. Create .env.local in the project root\n' +
+      '2. Add: TRUEFOUNDRY_BASE_URL, TRUEFOUNDRY_API_KEY, TRUEFOUNDRY_MODEL, TRUEFOUNDRY_METADATA_PROJECT_ID\n' +
+      '3. Restart the dev server\n\n' +
+      'Option B – Direct Gemini:\n' +
+      '1. Add: GEMINI_API_KEY=your_key_here\n\n' +
+      'See docs/TRUEFOUNDRY_SETUP.md and README.md for details.'
+    );
   };
 
   const handleImageSelect = useCallback((base64: string) => {
@@ -96,11 +106,13 @@ const App: React.FC = () => {
       if (image) setCurrentImage(image);
       setMessages(prev => [...prev, { id: Date.now().toString(), role: Role.MODEL, text: responseText || "Transformation complete!", timestamp: Date.now() }]);
     } catch (error: any) {
-      const err = error.toString();
+      const err = error?.message || error?.toString?.() || String(error);
       if (err.includes("Requested entity was not found")) {
         setApiKeyVerified(false);
       } else {
-        setMessages(prev => [...prev, { id: Date.now().toString(), role: Role.MODEL, text: ERROR_MESSAGES.generic, timestamp: Date.now() }]);
+        // In dev, show the real error so you can debug in Safari (no DevTools needed)
+        const display = import.meta.env.DEV ? `${ERROR_MESSAGES.generic} (${err})` : ERROR_MESSAGES.generic;
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: Role.MODEL, text: display, timestamp: Date.now() }]);
       }
     } finally {
       setIsProcessing(false);

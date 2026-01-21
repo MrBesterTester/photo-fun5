@@ -8,6 +8,14 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        // Proxy TrueFoundry in dev to avoid CORS (Failed to fetch / Failed to load)
+        proxy: {
+          '/tfy': {
+            target: (env.TRUEFOUNDRY_BASE_URL || 'https://api.truefoundry.com').replace(/\/$/, ''),
+            changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/tfy/, ''),
+          },
+        },
       },
       plugins: [react()],
       define: {
