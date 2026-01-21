@@ -39,6 +39,12 @@ export const editImageWithGemini = async (
           { inlineData: { mimeType: mimeType, data: cleanBase64 } },
         ],
       },
+      config: {
+        responseModalities: ['IMAGE', 'TEXT'],
+        imageConfig: {
+          imageSize: '2K', // Use 2K resolution to balance quality and cost (~$0.134/image vs $0.24 for 4K)
+        },
+      },
     });
 
     let generatedImage: string | undefined;
