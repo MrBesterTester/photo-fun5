@@ -21,15 +21,10 @@ const App: React.FC = () => {
   const [isLoadingDefault, setIsLoadingDefault] = useState(true);
 
   useEffect(() => {
-    // Check if API is available: TrueFoundry (Option A) or direct Gemini
+    // Check if Gemini API key is available
     const geminiKey = import.meta.env.VITE_GEMINI_API_KEY || (process.env.GEMINI_API_KEY as string);
-    const tfBase = import.meta.env.VITE_TRUEFOUNDRY_BASE_URL || (process.env.TRUEFOUNDRY_BASE_URL as string);
-    const tfKey = import.meta.env.VITE_TRUEFOUNDRY_API_KEY || (process.env.TRUEFOUNDRY_API_KEY as string);
-
     const hasGemini = geminiKey && geminiKey.trim() !== '' && geminiKey !== 'your_gemini_api_key_here';
-    const hasTrueFoundry = tfBase && tfKey && tfKey.trim() !== '';
-
-    setApiKeyVerified(hasGemini || hasTrueFoundry);
+    setApiKeyVerified(hasGemini);
   }, []);
 
   // Load default image on mount
@@ -58,14 +53,12 @@ const App: React.FC = () => {
 
   const handleSelectKey = async () => {
     alert(
-      'To set your API:\n\n' +
-      'Option A – TrueFoundry (recommended):\n' +
+      'To set your API key:\n\n' +
       '1. Create .env.local in the project root\n' +
-      '2. Add: TRUEFOUNDRY_BASE_URL, TRUEFOUNDRY_API_KEY, TRUEFOUNDRY_MODEL, TRUEFOUNDRY_METADATA_PROJECT_ID\n' +
+      '2. Add: GEMINI_API_KEY=your_key_here\n' +
       '3. Restart the dev server\n\n' +
-      'Option B – Direct Gemini:\n' +
-      '1. Add: GEMINI_API_KEY=your_key_here\n\n' +
-      'See docs/TRUEFOUNDRY_SETUP.md and README.md for details.'
+      'Get your API key from: https://aistudio.google.com/app/apikey\n\n' +
+      'See README.md for details.'
     );
   };
 

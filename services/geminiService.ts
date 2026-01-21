@@ -1,27 +1,16 @@
 import { GoogleGenAI } from "@google/genai";
-import { editImageWithTrueFoundry } from './truefoundryService';
 
 /**
- * Edit image with Gemini - supports both TrueFoundry Gateway and direct Google API
+ * Edit image with Gemini using Google's API
  */
 export const editImageWithGemini = async (
   imageBase64: string, 
   prompt: string
 ): Promise<{ image?: string; text?: string }> => {
-  // Check if TrueFoundry is configured
-  const truefoundryBaseUrl = import.meta.env.VITE_TRUEFOUNDRY_BASE_URL || (process.env.TRUEFOUNDRY_BASE_URL as string);
-  const truefoundryApiKey = import.meta.env.VITE_TRUEFOUNDRY_API_KEY || (process.env.TRUEFOUNDRY_API_KEY as string);
-  
-  if (truefoundryBaseUrl && truefoundryApiKey) {
-    // Use TrueFoundry Gateway
-    return editImageWithTrueFoundry(imageBase64, prompt);
-  }
-
-  // Fallback to direct Google API
   // Try Vite env first, then fallback to process.env
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY || (process.env.API_KEY as string) || (process.env.GEMINI_API_KEY as string);
   if (!apiKey) {
-    throw new Error('Neither TrueFoundry nor Gemini API key is set. Please set TRUEFOUNDRY_BASE_URL and TRUEFOUNDRY_API_KEY, or GEMINI_API_KEY in .env.local');
+    throw new Error('Gemini API key is not set. Please set GEMINI_API_KEY in .env.local');
   }
   const ai = new GoogleGenAI({ apiKey });
 
@@ -80,21 +69,10 @@ export const editImageWithGemini = async (
 };
 
 export const chatWithGemini = async (history: {role: string, text: string}[], newMessage: string) => {
-    // Check if TrueFoundry is configured
-    const truefoundryBaseUrl = import.meta.env.VITE_TRUEFOUNDRY_BASE_URL || (process.env.TRUEFOUNDRY_BASE_URL as string);
-    const truefoundryApiKey = import.meta.env.VITE_TRUEFOUNDRY_API_KEY || (process.env.TRUEFOUNDRY_API_KEY as string);
-    
-    if (truefoundryBaseUrl && truefoundryApiKey) {
-      // Use TrueFoundry Gateway
-      const { chatWithTrueFoundry } = await import('./truefoundryService');
-      return await chatWithTrueFoundry(history, newMessage);
-    }
-
-    // Fallback to direct Google API
     // Try Vite env first, then fallback to process.env
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY || (process.env.API_KEY as string) || (process.env.GEMINI_API_KEY as string);
     if (!apiKey) {
-      throw new Error('Neither TrueFoundry nor Gemini API key is set. Please set TRUEFOUNDRY_BASE_URL and TRUEFOUNDRY_API_KEY, or GEMINI_API_KEY in .env.local');
+      throw new Error('Gemini API key is not set. Please set GEMINI_API_KEY in .env.local');
     }
     const ai = new GoogleGenAI({ apiKey });
     const chat = ai.chats.create({
