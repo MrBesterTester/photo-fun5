@@ -24,7 +24,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, isProces
   };
 
   return (
-    <div className="flex flex-col h-full bg-white/5 rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
+    <div className="flex flex-col h-full lg:h-full min-h-[400px] bg-white/5 rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
       <div className="p-5 border-b border-white/10 bg-slate-900/40">
         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Magic Presets</p>
         <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">

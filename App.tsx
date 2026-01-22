@@ -113,9 +113,9 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col min-h-screen lg:h-screen lg:overflow-hidden">
       <Header onChangeKey={handleSelectKey} />
-      <main className="flex-1 overflow-hidden p-4 md:p-6 lg:p-10 flex flex-col lg:flex-row gap-6">
+      <main className="flex-1 p-4 md:p-6 lg:p-10 flex flex-col lg:flex-row gap-6 lg:overflow-hidden">
           <div className="flex-1 min-h-[400px] lg:h-full bg-slate-900 rounded-3xl overflow-hidden border border-white/5">
             {isLoadingDefault ? (
               <div className="w-full h-full flex items-center justify-center">
@@ -136,7 +136,7 @@ const App: React.FC = () => {
               />
             )}
           </div>
-          <div className="w-full lg:w-[450px] h-full">
+          <div className="w-full lg:w-[450px] lg:h-full min-h-[400px]">
              <ChatInterface 
                 messages={messages}
                 isProcessing={isProcessing}
