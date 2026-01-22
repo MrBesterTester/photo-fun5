@@ -1,7 +1,3 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
-
 # Photo Fun - Expert AI Editor
 
 A React-based web application for AI-powered photo editing using Google's Gemini API. Transform your photos with various artistic styles and custom prompts.
@@ -17,7 +13,7 @@ A React-based web application for AI-powered photo editing using Google's Gemini
 ## Prerequisites
 
 - Node.js (v18 or higher recommended)
-- A Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
+- A Gemini API key
 
 ## Setup Instructions
 
@@ -40,7 +36,7 @@ A React-based web application for AI-powered photo editing using Google's Gemini
      ```
      GEMINI_API_KEY=your_actual_api_key_here
      ```
-   - Get your API key from: https://aistudio.google.com/app/apikey
+   - The app will show "Ready" in the header when the API key is properly configured, or "Not Ready" if it's missing or invalid
 
 4. **Run the development server:**
    ```bash
@@ -75,7 +71,7 @@ photo-fun5/
 
 ## Environment Variables
 
-- `GEMINI_API_KEY` - Your Google Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
+- `GEMINI_API_KEY` - Your Google Gemini API key. The app displays a status indicator in the header showing "Ready" when the key is configured correctly, or "Not Ready" if it's missing or invalid.
 
 ## Troubleshooting
 

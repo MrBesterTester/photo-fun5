@@ -114,7 +114,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen lg:h-screen lg:overflow-hidden">
-      <Header onChangeKey={handleSelectKey} />
+      <Header apiKeyVerified={apiKeyVerified} />
       <main className="flex-1 p-4 md:p-6 lg:p-10 flex flex-col lg:flex-row gap-6 lg:overflow-hidden">
           <div className="flex-1 min-h-[400px] lg:h-full bg-slate-900 rounded-3xl overflow-hidden border border-white/5">
             {isLoadingDefault ? (

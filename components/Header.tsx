@@ -2,9 +2,10 @@ import React from 'react';
 
 interface HeaderProps {
   onChangeKey?: () => void;
+  apiKeyVerified?: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onChangeKey }) => {
+export const Header: React.FC<HeaderProps> = ({ onChangeKey, apiKeyVerified = false }) => {
   return (
     <header className="flex items-center justify-between px-6 py-4 bg-slate-900 border-b border-white/10 sticky top-0 z-50">
       <div className="flex items-center space-x-3">
@@ -28,10 +29,17 @@ export const Header: React.FC<HeaderProps> = ({ onChangeKey }) => {
             Change Key
           </button>
         )}
-        <div className="px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 flex items-center space-x-2">
+        {apiKeyVerified ? (
+          <div className="px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 flex items-center space-x-2">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-            <span className="text-[10px] font-bold text-green-400 uppercase tracking-tight">Secured</span>
-        </div>
+            <span className="text-[10px] font-bold text-green-400 uppercase tracking-tight">Ready</span>
+          </div>
+        ) : (
+          <div className="px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 flex items-center space-x-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+            <span className="text-[10px] font-bold text-red-400 uppercase tracking-tight">Not Ready</span>
+          </div>
+        )}
       </div>
     </header>
   );
