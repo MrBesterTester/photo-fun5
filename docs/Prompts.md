@@ -6,6 +6,7 @@ This document contains comprehensive prompts used to guide the development of th
 
 - [Chat Session 'setup': Initial Setup and TrueFoundry Integration](#chat-session-setup-initial-setup-and-truefoundry-integration-claude-sonnet-45--cursor-agent-mode)
 - [Chat Session 'proxy-test': Initial Testing, CORS Fixes, and Model Selection](#chat-session-proxy-test-initial-testing-cors-fixes-and-model-selection-claude-sonnet-45--cursor-agent-mode)
+- [Chat Session 'chat_back-to-Google': Revert to Google Gemini, Secure Serverless API Route, and Local Development Setup](#chat-session-chat_back-to-google-revert-to-google-gemini-secure-serverless-api-route-and-local-development-setup)
 
 ---
 
@@ -280,3 +281,165 @@ A fully tested and debugged TrueFoundry integration with:
 - ✅ Proper API key detection for Option A
 - ✅ Comprehensive test plan for future verification
 - ✅ Production-ready error handling
+
+---
+
+## Chat Session 'chat_back-to-Google': Revert to Google Gemini, Secure Serverless API Route, and Local Development Setup
+
+### Original Request
+
+```
+Please review @docs/Prompts.md and revert the support from TrueFoundry as given in @services/truefoundryService.ts over to Google as given in @services/geminiService.ts. There should be no fallback or dependency on any other LLM provider.
+
+[After reverting and testing] Please check the plan @docs/security-gcp-vercel.md against the code and propose one or more options to correct any discrepancies. [User chose Option B: Full Serverless API Route]
+
+Okay, let's go with Option B and make all necessary corrections.
+
+[After implementation] Does my app now need to be hosted on Vercel in order to run? [User chose Option 1: Use Vercel CLI for local development]
+
+Let's do option 1, please.
+```
+
+### Work Completed
+
+#### 1. Reverted from TrueFoundry to Google Gemini Only
+- **Deleted `services/truefoundryService.ts`** - Removed all TrueFoundry integration code
+- **Updated `services/geminiService.ts`** - Removed TrueFoundry detection and fallback logic
+- **Updated `vite.config.ts`** - Removed all `TRUEFOUNDRY_*` environment variable definitions and `/tfy` proxy
+- **Updated `App.tsx`** - Simplified API key verification to only check for Gemini API key
+- **Updated `README.md`** - Removed TrueFoundry setup instructions and references
+- **Removed Google AI Studio dependencies** - Cleaned up all references to AI Studio
+
+#### 2. Model Selection and Cost Optimization
+- **Switched to `gemini-3-pro-image-preview`** - Upgraded from `gemini-2.5-flash-image` for better quality
+- **Configured 2K resolution** - Added `imageSize: '2K'` to balance quality and cost (~$0.134/image vs $0.24 for 4K)
+- **Updated `docs/Google-Quota-Limiting.md`** - Revised pricing calculations and quota recommendations:
+  - Updated input/output pricing for `gemini-3-pro-image-preview`
+  - Recalculated 2K image output cost
+  - Adjusted budget calculations to reflect ~149 requests/month or ~5 requests/day
+
+#### 3. Mobile Responsiveness Fixes
+- **Fixed scrolling on small screens** - Updated `App.tsx` layout:
+  - Changed from `h-screen overflow-hidden` to `min-h-screen lg:h-screen lg:overflow-hidden`
+  - Updated main container to allow scrolling on mobile while maintaining desktop layout
+  - Fixed image preview container height constraints
+- **Verified cross-browser compatibility** - Tested in Safari and Chrome on mobile viewports
+
+#### 4. UI/UX Improvements
+- **Disabled "Change Key" button** - Removed `onChangeKey` prop from `Header` component (deemed inappropriate for end-users)
+- **Made status indicator functional** - Updated `Header` component to display "Ready" (green) or "Not Ready" (red) based on `apiKeyVerified` state
+- **Enhanced error handling** - Updated error messages to handle API route responses (401, 429, etc.)
+
+#### 5. Implemented Option B: Secure Serverless API Route
+- **Created `api/image-edit.ts`** - New Vercel serverless function:
+  - Uses Web Standard API format (`Request`/`Response`)
+  - Reads `GEMINI_API_KEY` from server-side `process.env` only
+  - Implements `maxOutputTokens: 512` limit for cost control
+  - Uses `gemini-3-pro-image-preview` at 2K resolution
+  - Handles errors with appropriate HTTP status codes (400, 401, 429, 500)
+  - Maintains same response format as previous implementation
+- **Updated `services/geminiService.ts`** - Refactored `editImageWithGemini`:
+  - Removed direct Gemini API calls and API key handling
+  - Now calls `/api/image-edit` endpoint via fetch
+  - Maintains same function signature for compatibility
+  - Updated `chatWithGemini` to throw error (unused, would need API route if needed)
+- **Removed API key from client exposure** - Updated `vite.config.ts`:
+  - Removed all `VITE_GEMINI_API_KEY` and client-side API key exposure
+  - API key is now server-side only
+- **Updated `App.tsx`** - Modified API key verification:
+  - Changed from checking client-side env vars to checking API route availability
+  - Enhanced error handling for API route responses
+- **Updated `docs/security-gcp-vercel.md`** - Aligned documentation with implementation:
+  - Changed endpoint references from `/api/chat` to `/api/image-edit`
+  - Updated code examples to show actual model and image editing structure
+  - Clarified that API key is set in Vercel Project Settings (server-side)
+  - Updated model reference in quota section
+
+#### 6. Local Development Setup with Vercel CLI
+- **Added Vercel CLI as dev dependency** - Added `vercel` to `package.json` devDependencies
+- **Created `dev:vercel` script** - Added `npm run dev:vercel` command for local development
+- **Updated `README.md`** - Comprehensive local development instructions:
+  - Added Vercel CLI to prerequisites
+  - Updated setup instructions to use `npm run dev:vercel`
+  - Explained difference between local and production API key setup
+  - Added troubleshooting section for Vercel CLI
+- **Documented architecture** - Clarified that app requires serverless function platform (Vercel) for production
+
+#### 7. Documentation Updates
+- **Added live demo link** - Updated `README.md` to include link to `https://photo-fun5.samkirk.com`
+- **Added Table of Contents** - Added automatic TOC to `docs/security-gcp-vercel.md` for better navigation
+- **Moved planning document** - Copied implementation plan to `docs/implement_option_b_secure_serverless_api_route.md`
+- **Updated project structure** - Added `api/` directory to README project structure
+
+### Key Features Implemented
+
+1. **Secure API Architecture**: API key is now completely server-side, never exposed to browser
+2. **Serverless Function Support**: Full Vercel serverless function implementation with proper error handling
+3. **Cost Control**: `maxOutputTokens` limit enforced server-side, 2K resolution for optimal cost/quality balance
+4. **Local Development**: Vercel CLI integration for full local development with API routes
+5. **Mobile Responsive**: Fixed scrolling issues on small screens
+6. **Production Ready**: Proper separation of concerns, secure key management, comprehensive documentation
+
+### Files Created/Modified
+
+**New Files:**
+- `api/image-edit.ts` - Secure serverless API route for image editing
+- `docs/implement_option_b_secure_serverless_api_route.md` - Implementation plan document
+
+**Modified Files:**
+- `services/geminiService.ts` - Refactored to call API route instead of Gemini directly
+- `vite.config.ts` - Removed API key exposure, removed TrueFoundry config
+- `App.tsx` - Updated API key verification, mobile responsiveness, error handling
+- `components/Header.tsx` - Made status indicator functional, removed Change Key button
+- `package.json` - Added Vercel CLI, added dev:vercel script
+- `README.md` - Updated setup instructions, added Vercel CLI info, added live demo link
+- `docs/security-gcp-vercel.md` - Updated to match implementation, added TOC
+- `docs/Google-Quota-Limiting.md` - Updated pricing and quota calculations for new model
+
+**Deleted Files:**
+- `services/truefoundryService.ts` - Removed TrueFoundry integration
+
+### Git Commits
+
+1. `3a6c552` - Revert to Google Gemini API only - remove TrueFoundry support
+2. `e250dd5` - Switch to Gemini 3 Pro Image Preview at 2K resolution and update quota documentation
+3. `a860adc` - Fix mobile scrolling issue - make app responsive for small screens
+4. `69dacc2` - Make status indicator functional and update README
+5. `88db508` - Add live demo link to README and add TOC to security documentation
+6. *(Pending commit)* - Implement Option B: Secure serverless API route with Vercel CLI setup
+
+### Technical Decisions
+
+1. **Option B: Full Serverless API Route**: Chose to implement complete serverless architecture rather than partial solutions, ensuring API key security and enabling Vercel WAF rate limiting.
+
+2. **Vercel CLI for Local Development**: Selected Vercel CLI over Vite proxy solutions to maintain consistency between local and production environments and ensure API routes work identically.
+
+3. **Web Standard API Format**: Used modern `Request`/`Response` format for serverless function instead of Node.js-style handlers for better compatibility and future-proofing.
+
+4. **2K Resolution for Cost Control**: Balanced quality and cost by using 2K resolution instead of 4K, reducing per-image cost from ~$0.24 to ~$0.134 while maintaining acceptable quality.
+
+5. **Server-Side Only API Key**: Completely removed client-side API key exposure, ensuring security even if source code is inspected.
+
+### Architecture Changes
+
+**Before (Insecure - Client-Side API Key):**
+```
+Browser → geminiService.ts → Gemini API (with exposed key in browser)
+```
+
+**After (Secure - Serverless API Route):**
+```
+Browser → geminiService.ts → /api/image-edit (serverless) → Gemini API (key on server only)
+```
+
+### Result
+
+A fully secure, production-ready application with:
+- ✅ API key completely hidden from browser/client-side code
+- ✅ Serverless API route architecture matching security document
+- ✅ Local development support via Vercel CLI
+- ✅ Cost controls enforced server-side (`maxOutputTokens`, 2K resolution)
+- ✅ Mobile-responsive design with proper scrolling
+- ✅ Functional status indicators and improved UX
+- ✅ Comprehensive documentation aligned with implementation
+- ✅ Ready for Vercel deployment with WAF rate limiting

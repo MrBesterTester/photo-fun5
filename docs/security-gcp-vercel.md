@@ -25,7 +25,7 @@ In the **Google Cloud Console** for the project that owns your Gemini API:
 
 - Go to **IAM & Admin → Quotas**.  
 - Filter by **“Gemini API”** or the specific Gemini services you’re using.[1][2]
-- For the models/endpoints you use (e.g., `gemini-2.5-flash`, image models), adjust:
+- For the models/endpoints you use (e.g., `gemini-3-pro-image-preview`, image models), adjust:
 
   - **Requests per minute** – e.g., 30–60 RPM for your demo app.  
   - **Requests per day** – set a number that corresponds to a budget you’re comfortable with.  
@@ -58,11 +58,12 @@ Goal: Throttle abusive HTTP traffic before it hits your code or GCP.
 ### a) Deploy your existing app to Vercel
 
 - Connect your GitHub repo (or import the project) in the Vercel dashboard.  
-- Ensure your API route (e.g., `/api/chat`) is deployed as a serverless function or route handler that calls Gemini.
+- Ensure your API route `/api/image-edit` is deployed as a serverless function that calls Gemini.
+- The API route is located at `api/image-edit.ts` and handles image editing requests.
 
 No security logic added yet.
 
-### b) Add a WAF rate‑limit rule for your chatbot endpoint
+### b) Add a WAF rate‑limit rule for your image editing endpoint
 
 In the Vercel dashboard for this project:[4][5][6]
 
@@ -70,9 +71,9 @@ In the Vercel dashboard for this project:[4][5][6]
 2. Click **Configure** if prompted, then **+ New Rule**.  
 3. Define the rule:
 
-   - **Name:** `Rate limit /api/chat`  
+   - **Name:** `Rate limit /api/image-edit`  
    - **Conditions (IF):**  
-     - `Request Path` -  `Equals` -  `/api/chat`  
+     - `Request Path` -  `Equals` -  `/api/image-edit`  
    - **Action (THEN):**  
      - `Rate Limit`  
      - Strategy: `Fixed Window`  
@@ -83,7 +84,7 @@ In the Vercel dashboard for this project:[4][5][6]
 4. Save and **Publish** the rule.  
 
 Effect:  
-- Any single IP can only hit `/api/chat` a limited number of times per minute.  
+- Any single IP can only hit `/api/image-edit` a limited number of times per minute.  
 - Excess traffic is automatically answered with **429** at the edge; your function often won’t execute at all during abuse.[7][4]
 
 You can later tune the numbers based on logs (e.g., more generous for logged‑in users, stricter for anonymous).
@@ -96,16 +97,27 @@ Goal: Small, simple safeguards inside your app with minimal coding.
 
 ### a) Cap Gemini response size per request
 
-In your `/api/chat` handler, always set a maximum output size:
+In your `/api/image-edit` handler, always set a maximum output size:
 
 ```ts
-const MAX_OUTPUT_TOKENS = 512; // or similar
+const MAX_OUTPUT_TOKENS = 512; // Limit output tokens to control costs per request
 
-const result = await geminiClient.models.generateContent({
-  model: 'gemini-2.5-flash',
-  contents: [{ role: 'user', parts: [{ text: userPrompt }]}],
-  generationConfig: {
-    maxOutputTokens: MAX_OUTPUT_TOKENS,
+const response = await ai.models.generateContent({
+  model: 'gemini-3-pro-image-preview',
+  contents: {
+    parts: [
+      { text: enforcementPrompt },
+      { inlineData: { mimeType: mimeType, data: cleanBase64 } },
+    ],
+  },
+  config: {
+    responseModalities: ['IMAGE', 'TEXT'],
+    imageConfig: {
+      imageSize: '2K', // Use 2K resolution to balance quality and cost
+    },
+    generationConfig: {
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+    },
   },
 });
 ```
@@ -113,15 +125,22 @@ const result = await geminiClient.models.generateContent({
 Effect:  
 - Even when requests are allowed, each one has a bounded worst‑case cost.  
 - Combined with GCP quotas, this keeps per‑user and per‑day costs predictable.
+- The `maxOutputTokens` limit is enforced server-side in the API route.
 
 ### b) Use environment variables for keys
 
 - In Vercel **Project Settings → Environment Variables**, set:  
-  - `GCP_PROJECT_ID`  
-  - `GEMINI_API_KEY` (or service account JSON/credentials as appropriate)  
+  - `GEMINI_API_KEY` - Your Google Gemini API key (server-side only, not exposed to client)
+  - `GCP_PROJECT_ID` (optional, if needed for additional GCP services)
+
+**Important:**  
+- The API key is set in Vercel's server-side environment variables, NOT in client-side code
+- The API key is never exposed to the browser - all Gemini API calls happen server-side in the `/api/image-edit` route
+- Do NOT set `VITE_GEMINI_API_KEY` or expose the key in `vite.config.ts` - this would expose it to the client
 
 Effect:  
 - Keeps keys secure and makes it easy to rotate them without code changes.
+- API key is completely hidden from browser/client-side code.
 
 ***
 
@@ -133,10 +152,11 @@ With almost everything done via admin config:
   - Hard limits on how much Gemini can be used per minute and per day, per app project.[2][1]
 
 - **Vercel WAF rate limit:**  
-  - Per‑IP throttling of `/api/chat` without touching your app code.[6][4]
+  - Per‑IP throttling of `/api/image-edit` without touching your app code.[6][4]
 
 - **Minimal app code:**  
-  - Just a `maxOutputTokens` cap (plus your existing Gemini integration).  
+  - Just a `maxOutputTokens` cap in the API route (plus your existing Gemini integration).
+  - Client-side code calls the secure API route instead of Gemini directly.  
 
 Result:  
 - A casual or moderately determined attacker is rate‑limited at the edge and further constrained by GCP quotas.  

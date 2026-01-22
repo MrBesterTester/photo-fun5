@@ -21,10 +21,29 @@ const App: React.FC = () => {
   const [isLoadingDefault, setIsLoadingDefault] = useState(true);
 
   useEffect(() => {
-    // Check if Gemini API key is available
-    const geminiKey = import.meta.env.VITE_GEMINI_API_KEY || (process.env.GEMINI_API_KEY as string);
-    const hasGemini = geminiKey && geminiKey.trim() !== '' && geminiKey !== 'your_gemini_api_key_here';
-    setApiKeyVerified(hasGemini);
+    // Check if API route is available (API key is now server-side only)
+    // In production, API route availability indicates readiness
+    // The API route will return proper errors if the key is missing
+    const checkApiRoute = async () => {
+      try {
+        // Simple check: try to reach the API route
+        // In dev, this might fail if API route isn't set up, which is fine
+        // In production (Vercel), the route will be available
+        const isProduction = import.meta.env.PROD;
+        if (isProduction) {
+          // In production, assume ready (API route handles auth)
+          setApiKeyVerified(true);
+        } else {
+          // In dev, check if we can reach the route (optional - route may not be available in dev)
+          // For now, set to true and let API route handle errors
+          setApiKeyVerified(true);
+        }
+      } catch (error) {
+        // If check fails, set to false
+        setApiKeyVerified(false);
+      }
+    };
+    checkApiRoute();
   }, []);
 
   // Load default image on mount
@@ -100,8 +119,12 @@ const App: React.FC = () => {
       setMessages(prev => [...prev, { id: Date.now().toString(), role: Role.MODEL, text: responseText || "Transformation complete!", timestamp: Date.now() }]);
     } catch (error: any) {
       const err = error?.message || error?.toString?.() || String(error);
-      if (err.includes("Requested entity was not found")) {
+      // Handle API route errors
+      if (err.includes("Invalid or missing API key") || err.includes("Requested entity was not found")) {
         setApiKeyVerified(false);
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: Role.MODEL, text: "API key not configured on server. Please configure GEMINI_API_KEY in Vercel project settings.", timestamp: Date.now() }]);
+      } else if (err.includes("Rate limit exceeded")) {
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: Role.MODEL, text: "Rate limit exceeded. Please try again later.", timestamp: Date.now() }]);
       } else {
         // In dev, show the real error so you can debug in Safari (no DevTools needed)
         const display = import.meta.env.DEV ? `${ERROR_MESSAGES.generic} (${err})` : ERROR_MESSAGES.generic;

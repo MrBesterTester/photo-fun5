@@ -1,94 +1,52 @@
-import { GoogleGenAI } from "@google/genai";
-
 /**
- * Edit image with Gemini using Google's API
+ * Edit image with Gemini using secure serverless API route
+ * API key is kept secure on the server side
  */
 export const editImageWithGemini = async (
   imageBase64: string, 
   prompt: string
 ): Promise<{ image?: string; text?: string }> => {
-  // Try Vite env first, then fallback to process.env
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || (process.env.API_KEY as string) || (process.env.GEMINI_API_KEY as string);
-  if (!apiKey) {
-    throw new Error('Gemini API key is not set. Please set GEMINI_API_KEY in .env.local');
-  }
-  const ai = new GoogleGenAI({ apiKey });
-
-  const mimeMatch = imageBase64.match(/^data:(image\/[a-zA-Z+]+);base64,/);
-  const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-  const cleanBase64 = imageBase64.replace(/^data:image\/(png|jpeg|webp|heic);base64,/, '');
-
-  const enforcementPrompt = `
-    TASK: Edit the provided image based on the USER INSTRUCTION below.
-    
-    STRICT RULES:
-    1. Identity Preservation: You MUST maintain the core identity, facial features, and key characteristics of the main subject. The person must remain recognizable.
-    2. Composition: Preserve the original image's angle, pose, and composition unless explicitly told to change it.
-    3. Creativity: If a style is requested, apply it vividly and artistically.
-    4. Output: Generate a high-quality, visually striking image.
-
-    USER INSTRUCTION: ${prompt}
-  `;
-
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-image-preview',
-      contents: {
-        parts: [
-          { text: enforcementPrompt },
-          { inlineData: { mimeType: mimeType, data: cleanBase64 } },
-        ],
+    const response = await fetch('/api/image-edit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      config: {
-        responseModalities: ['IMAGE', 'TEXT'],
-        imageConfig: {
-          imageSize: '2K', // Use 2K resolution to balance quality and cost (~$0.134/image vs $0.24 for 4K)
-        },
-      },
+      body: JSON.stringify({
+        imageBase64,
+        prompt,
+      }),
     });
 
-    let generatedImage: string | undefined;
-    let generatedText: string | undefined;
-
-    const candidate = response.candidates?.[0];
-    
-    if (candidate?.content?.parts) {
-      for (const part of candidate.content.parts) {
-        if (part.inlineData) {
-          generatedImage = `data:image/png;base64,${part.inlineData.data}`;
-        } else if (part.text) {
-          generatedText = part.text;
-        }
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: response.statusText }));
+      const errorMessage = errorData.error || `API request failed with status ${response.status}`;
+      
+      // Handle specific error cases
+      if (response.status === 401) {
+        throw new Error('Invalid or missing API key on server');
       }
+      if (response.status === 429) {
+        throw new Error('Rate limit exceeded. Please try again later.');
+      }
+      
+      throw new Error(errorMessage);
     }
 
-    if (!generatedImage && !generatedText) {
-      throw new Error("No content generated.");
-    }
-
-    return { image: generatedImage, text: generatedText };
+    const data = await response.json();
+    return { image: data.image, text: data.text };
 
   } catch (error) {
-    console.error("Gemini API Error:", error);
+    console.error("Image edit API Error:", error);
     throw error;
   }
 };
 
+// Note: chatWithGemini is currently unused by the app
+// If needed in the future, it should be updated to use a secure API route
+// similar to editImageWithGemini, rather than calling Gemini directly from the client
 export const chatWithGemini = async (history: {role: string, text: string}[], newMessage: string) => {
-    // Try Vite env first, then fallback to process.env
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || (process.env.API_KEY as string) || (process.env.GEMINI_API_KEY as string);
-    if (!apiKey) {
-      throw new Error('Gemini API key is not set. Please set GEMINI_API_KEY in .env.local');
-    }
-    const ai = new GoogleGenAI({ apiKey });
-    const chat = ai.chats.create({
-        model: 'gemini-2.5-flash',
-        history: history.map(h => ({
-            role: h.role,
-            parts: [{ text: h.text }]
-        }))
-    });
-
-    const result = await chat.sendMessage({ message: newMessage });
-    return result.text;
+    // This function is not currently used and would need to be refactored
+    // to use a secure API route if chat functionality is added
+    throw new Error('chatWithGemini is not implemented. Chat functionality would require a secure API route.');
 }

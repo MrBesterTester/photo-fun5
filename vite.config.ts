@@ -11,11 +11,8 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [react()],
       define: {
-        // Expose GEMINI_API_KEY to client code via import.meta.env
-        'import.meta.env.VITE_GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        // Also support process.env for backward compatibility
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+        // API key is now server-side only - not exposed to client
+        // GEMINI_API_KEY should be set in Vercel Project Settings → Environment Variables
       },
       resolve: {
         alias: {
