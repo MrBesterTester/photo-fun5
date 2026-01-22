@@ -2,6 +2,8 @@
 
 A React-based web application for AI-powered photo editing using Google's Gemini API. Transform your photos with various artistic styles and custom prompts.
 
+**Try it out at [https://photo-fun5.samkirk.com](https://photo-fun5.samkirk.com)**
+
 ## Features
 
 - 🎨 Multiple preset styles (Professional, Claymation, Cyberpunk, Pencil Sketch)
