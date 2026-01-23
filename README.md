@@ -2,7 +2,7 @@
 
 A React-based web application for AI-powered photo editing using Google's Gemini API. Transform your photos with various artistic styles and custom prompts.
 
-**Try it out at [https://photo-fun5.samkirk.com](https://photo-fun5.samkirk.com)**
+**Try it out at [https://www.photo-fun5.samkirk.com](https://www.photo-fun5.samkirk.com)**
 
 ## Features
 
@@ -11,14 +11,19 @@ A React-based web application for AI-powered photo editing using Google's Gemini
 - 📸 Image upload with drag & drop support
 - 🔄 Compare original vs edited images
 - 💾 Download edited images
+- 😃 A default, ready-to-go image of me!
 
-## Prerequisites
+You may hit a quota limit or experience rate limiting if your usage is intense. In that case, please try again the next day.
+
+## For Developers
+
+### Prerequisites
 
 - Node.js (v18 or higher recommended)
 - A Gemini API key
 - Vercel CLI (for local development with API routes)
 
-## Setup Instructions
+#### Setup Instructions
 
 1. **Clone or navigate to the project directory:**
    ```bash
@@ -61,7 +66,7 @@ A React-based web application for AI-powered photo editing using Google's Gemini
    - The app will be available at `http://localhost:3000`
    - The API route will be available at `http://localhost:3000/api/image-edit`
 
-## Project Structure
+### Project Structure
 
 ```
 photo-fun5/
@@ -80,24 +85,24 @@ photo-fun5/
 └── package.json       # Dependencies
 ```
 
-## Available Scripts
+#### Available Scripts
 
 - `npm run dev:vercel` - Start development server with Vercel CLI (required for API routes to work locally)
 - `npm run dev` - Start Vite dev server only (API routes won't work - use `dev:vercel` instead)
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
 
-## Environment Variables
+#### Environment Variables
 
-### Local Development (`.env.local`)
+##### Local Development (`.env.local`)
 - `GEMINI_API_KEY` - Your Google Gemini API key for local development. The app displays a status indicator in the header showing "Ready" when the key is configured correctly, or "Not Ready" if it's missing or invalid.
 
-### Production (Vercel)
+#### Production (Vercel)
 - Set `GEMINI_API_KEY` in **Vercel Project Settings → Environment Variables**
 - The API key is kept secure on the server side and never exposed to the browser
 - All Gemini API calls happen through the secure `/api/image-edit` serverless route
 
-## Troubleshooting
+#### Troubleshooting
 
 - **Blank screen:** Make sure you've created `.env.local` with a valid `GEMINI_API_KEY`
 - **API route not working locally:** Make sure you're using `npm run dev:vercel` instead of `npm run dev`. The API routes require Vercel CLI to run locally.
