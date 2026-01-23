@@ -17,6 +17,17 @@ export const Header: React.FC<HeaderProps> = ({ onChangeKey, apiKeyVerified = fa
         <div>
           <h1 className="text-xl font-bold tracking-tight text-white leading-none">Photo Fun</h1>
           <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider font-semibold">AI Editor</p>
+          <p className="text-[10px] text-slate-500 mt-0.5">
+            {typeof __BUILD_DATE__ !== 'undefined' ? __BUILD_DATE__ : '—'} ·{' '}
+            <a
+              href="https://github.com/MrBesterTester/photo-fun5"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-400 hover:text-blue-400 transition-colors"
+            >
+              GitHub repo
+            </a>
+          </p>
         </div>
       </div>
       
