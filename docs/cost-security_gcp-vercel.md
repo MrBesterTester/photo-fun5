@@ -11,7 +11,8 @@ Here's a focused, admin‑driven plan using only **GCP** (for Gemini) and **Verc
 - [3. Minimal App‑Side Settings (One-Time)](#3-minimal-appside-settings-one-time)
   - [a) Cap Gemini response size per request](#a-cap-gemini-response-size-per-request)
   - [b) Use environment variables for keys](#b-use-environment-variables-for-keys)
-- [4. How This Meets Your "Enough Is Enough" Bar](#4-how-this-meets-your-enough-is-enough-bar)
+- [4. Local Development vs Production: Security Layer Coverage](#4-local-development-vs-production-security-layer-coverage)
+- [5. How This Meets Your "Enough Is Enough" Bar](#5-how-this-meets-your-enough-is-enough-bar)
 - [Appendix: Cost Justification and Budget Calculation](#appendix-cost-justification-and-budget-calculation)
   - [Direct Answer](#direct-answer)
   - [Gemini 3 Pro Image Preview Pricing Structure](#gemini-3-pro-image-preview-pricing-structure)
@@ -159,7 +160,55 @@ Effect:
 
 ***
 
-## 4. How This Meets Your "Enough Is Enough" Bar
+## 4. Local Development vs Production: Security Layer Coverage
+
+When running locally with `vercel dev` versus deploying to Vercel production, different security layers apply:
+
+| Security Layer | Applies Locally? | Applies in Production? | Notes |
+|----------------|------------------|------------------------|-------|
+| **Step 1a: GCP Quotas** | ✅ Yes | ✅ Yes | Enforced by Google's API regardless of request origin |
+| **Step 2b: Vercel WAF** | ❌ No | ✅ Yes | Only applies to requests through Vercel's edge network |
+| **Step 3a: `maxOutputTokens`** | ✅ Yes | ✅ Yes | Code-level enforcement works everywhere |
+
+### Why GCP Quotas Apply Locally
+
+GCP quota limits are enforced at the **Google Cloud API level**, not at Vercel's edge. When your local code calls the Gemini API, the request goes to Google's servers, which check and enforce the quotas you configured in GCP Console:
+
+```
+Local Development Flow:
+┌─────────────────────────────────────┐
+│  Your Local Code                    │
+│  (vercel dev on localhost)          │
+│         ↓                           │
+│  Makes API call to Gemini           │
+│         ↓                           │
+│  Google Cloud API                   │
+│  └─ Checks Quota Limits ✓           │
+│  └─ Enforces 5 requests/day ✓       │
+│         ↓                           │
+│  Returns response or 429 error      │
+└─────────────────────────────────────┘
+```
+
+**Example:** If you set 5 requests per day in GCP, after 5 requests (whether from local or production), the 6th request will receive a `429 Resource Exhausted: Quota exceeded` error from Google.
+
+### Why Vercel WAF Doesn't Apply Locally
+
+Vercel WAF (Web Application Firewall) rules run on **Vercel's edge network**, not on your local machine. When you run `vercel dev` locally, requests go directly to your local serverless function and bypass Vercel's edge infrastructure where WAF rules are enforced.
+
+**This means:** WAF rate limiting configured in Step 2b will only take effect after you deploy to Vercel production. For local development, you would need to implement rate limiting in code if you want to test it locally.
+
+### Summary
+
+- **GCP quotas (Step 1a):** Active in both local and production environments, providing cost protection during development.
+- **Vercel WAF (Step 2b):** Only active in production, providing additional edge-level protection for deployed apps.
+- **Code-level limits (Step 3a):** Active everywhere, providing per-request cost bounds.
+
+This layered approach ensures you have cost protection during development (via GCP quotas) and additional traffic protection in production (via both GCP quotas and Vercel WAF).
+
+***
+
+## 5. How This Meets Your "Enough Is Enough" Bar
 
 With almost everything done via admin config:
 
