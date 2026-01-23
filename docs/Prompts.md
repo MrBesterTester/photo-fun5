@@ -7,6 +7,7 @@ This document contains comprehensive prompts used to guide the development of th
 - [Chat Session 'setup': Initial Setup and TrueFoundry Integration](#chat-session-setup-initial-setup-and-truefoundry-integration-claude-sonnet-45--cursor-agent-mode)
 - [Chat Session 'proxy-test': Initial Testing, CORS Fixes, and Model Selection](#chat-session-proxy-test-initial-testing-cors-fixes-and-model-selection-claude-sonnet-45--cursor-agent-mode)
 - [Chat Session 'chat_back-to-Google': Revert to Google Gemini, Secure Serverless API Route, and Local Development Setup](#chat-session-chat_back-to-google-revert-to-google-gemini-secure-serverless-api-route-and-local-development-setup)
+- [Summary of Work Since Tag `chat_vercel-deployment`](#summary-of-work-since-tag-chat_vercel-deployment)
 
 ---
 
@@ -443,3 +444,53 @@ A fully secure, production-ready application with:
 - ✅ Functional status indicators and improved UX
 - ✅ Comprehensive documentation aligned with implementation
 - ✅ Ready for Vercel deployment with WAF rate limiting
+
+---
+
+## Summary of Work Since Tag `chat_vercel-deployment`
+
+*This section summarizes the work completed since and including the commit tagged `chat_vercel-deployment`. It is a summary of work only and does not consolidate or restate chat requests.*
+
+### Work Completed
+
+#### 1. Vercel Deployment and Local Development Documentation
+- **Created `docs/start_vercel-deployment-steps.md`** — Step-by-step instructions for local development setup, API key configuration, Vercel CLI first-time setup, production deployment, and what to expect during development.
+
+#### 2. Cost-Security Consolidation and `MAX_OUTPUT_TOKENS`
+- **Merged `Google-Quota-Limiting.md` into `docs/cost-security_gcp-vercel.md`** — Single cost and security document.
+- **Renamed** `security-gcp-vercel.md` → `cost-security_gcp-vercel.md`.
+- **Added cost justification appendix** — Token breakdown, ~5 RPD target, ~$20/month budget, handling of “killer” requests.
+- **Implemented `MAX_OUTPUT_TOKENS` in `api/image-edit.ts`** — Named constant (replacing hardcoded value) per cost-security Step 3a.
+
+#### 3. Local vs Production Security Coverage
+- **New Section 4 in `docs/cost-security_gcp-vercel.md`** — When Gemini rate limits, Vercel WAF, and `maxOutputTokens` apply locally vs in production; why Vercel WAF does not run with `vercel dev`; local API key from `.env.local`.
+
+#### 4. Fix: No Content from Gemini 3 Pro Image; API and UI Updates
+- **`api/image-edit.ts`** — Raised `MAX_OUTPUT_TOKENS` 512→8192 (512 caused `finishReason: MAX_TOKENS` and empty image parts). Added `aspectRatio` to `imageConfig`. Improved `parseParts` for `blob.data` as `Uint8Array`/`ArrayBuffer` and `mimeType`. Added `promptFeedback`/`blockReason` handling, `response.data`/`text` fallbacks, and debug logging when no content.
+- **`docs/cost-security_gcp-vercel.md`** — Updated for `maxOutputTokens: 8192`, aligned code sample with `api/image-edit`, clarified billing on actual usage.
+- **App, ImagePreview, ImageUploader** — Camera flow, upload cancel, reset to default image, `onCancel` for `ImageUploader`.
+- **`tsconfig.json`** — `moduleResolution: "node"`, exclude tweaks. **`vite-env.d.ts`** — Declare `import.meta.env` and `__BUILD_DATE__`.
+
+#### 5. Build Date and GitHub Repo Link in Header
+- **Header** — Shows build date (YYYY-MM-DD_HH:MM) and “GitHub repo” link after “AI Editor”.
+- **`vite.config.ts`** — `define: __BUILD_DATE__` at build time from ISO string.
+
+#### 6. Cost-Security: Tier 1 RPD, Billing Budget Alert, TOC
+- **“Tier 1 RPD and the Rate limits docs”** — Official Gemini rate-limit docs do not publish RPD per tier/model; AI Studio Usage (Rate limit tab) is the source of truth; 20 RPD for `gemini-3-pro-image-preview` is 4× the ~5 RPD target.
+- **Appendix** — Direct Answer, Monitoring, Summary updated to reference 20 RPD and that Google’s limit is not the bottleneck.
+- **“Optional: Billing Budget Alert”** — Replaced “Optional: view quota in GCP Console” with step-by-step GCP Budgets & Alerts (project/billing access, scope, amount, thresholds 50%/90%/100%, email options). TOC and Section 4 subsection links added; alert thresholds set to 50%, 90%, 100%.
+
+#### 7. CI/CD Guide, GitHub Actions CI, README “For Developers”
+- **`docs/CI_CD.md`** — CI/CD guide adapted for Vercel (from tensor-logic): Purpose, Intention (push to GitHub for showcase and security; no direct publish from local), Overview, GitHub Actions CI setup, Deployment to Vercel, Workflow Configuration, Troubleshooting, Custom Domain (Vercel). Repo URLs use `MrBesterTester`.
+- **`.github/workflows/ci.yml`** — GitHub Actions CI: `npm ci`, `npx tsc --noEmit`, `npm run build`, upload `dist/` artifact; runs on push/PR to `main` and `master`.
+- **`README.md`** — New **“For Developers”** section before Prerequisites. Prerequisites, Project Structure, Setup Instructions, Available Scripts, Environment Variables, Production (Vercel), and Troubleshooting are subsections under For Developers; License remains a top-level `##`.
+
+### Git Commits (since and including `chat_vercel-deployment`)
+
+1. `a630718` — Add Vercel deployment and local development steps documentation  
+2. `070d1a1` — Merge quota limiting docs and implement MAX_OUTPUT_TOKENS constant  
+3. `d6343d8` — Update cost-security doc: enhance TOC and add local vs production security coverage section  
+4. `455bedf` — fix: resolve No content from Gemini 3 Pro Image; UI and config updates  
+5. `b128139` — feat: add build date and GitHub repo link to header  
+6. `44ccb73` — docs(cost-security): Tier 1 RPD note, Billing Budget Alert steps, TOC and threshold tweaks  
+7. `1493c57` — docs: CI/CD guide (Vercel), GitHub Actions CI, README For Developers
