@@ -3,9 +3,10 @@ import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE_MB } from '../constants';
 
 interface ImageUploaderProps {
   onImageSelect: (base64: string) => void;
+  onCancel?: () => void;
 }
 
-export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect }) => {
+export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect, onCancel }) => {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -78,9 +79,20 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect }) =
       <p className="text-sm text-slate-400 text-center max-w-xs mb-8">
         AI-powered editing works best with clear, high-quality portraits.
       </p>
-      <span className="px-8 py-3 rounded-xl bg-blue-600 group-hover:bg-blue-500 text-white font-bold text-sm transition-all shadow-lg shadow-blue-500/25">
-        Choose File
-      </span>
+      <div className="flex flex-col sm:flex-row items-center gap-3">
+        <span className="px-8 py-3 rounded-xl bg-blue-600 group-hover:bg-blue-500 text-white font-bold text-sm transition-all shadow-lg shadow-blue-500/25">
+          Choose File
+        </span>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onCancel(); }}
+            className="px-6 py-2.5 text-sm font-medium text-slate-400 hover:text-white border border-white/20 hover:border-white/40 rounded-xl transition-all"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
       <input 
           ref={fileInputRef}
           type="file" 

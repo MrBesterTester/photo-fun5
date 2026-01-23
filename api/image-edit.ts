@@ -1,13 +1,32 @@
+import { readFileSync, existsSync } from "fs";
+import * as path from "path";
 import { GoogleGenAI } from "@google/genai";
 
 /**
  * Serverless API route for image editing with Gemini
  * Keeps API key secure on the server side
- * 
- * Vercel serverless function using Web Standard API (Request/Response)
+ *
+ * Local dev: when GEMINI_API_KEY is not in process.env, load .env.local
+ * (avoids dotenv dependency; Vercel prod uses env vars from project settings).
  */
 
-const MAX_OUTPUT_TOKENS = 512; // Limit output tokens to control costs per request
+// 2K image ≈1120 tokens; leave room for thinking + text. 512 was truncating (finishReason: MAX_TOKENS, numParts: 0).
+const MAX_OUTPUT_TOKENS = 8192;
+
+function loadEnvLocal(): void {
+  if (process.env.GEMINI_API_KEY) return;
+  try {
+    const p = path.resolve(process.cwd(), ".env.local");
+    if (existsSync(p)) {
+      const content = readFileSync(p, "utf8");
+      for (const line of content.split("\n")) {
+        const m = line.match(/^\s*([^#=]+)=(.*)$/);
+        if (m) process.env[m[1].trim()] = m[2].trim().replace(/^["']|["']$/g, "");
+      }
+    }
+  } catch (_) {}
+}
+loadEnvLocal();
 
 export async function POST(request: Request) {
   try {
@@ -15,21 +34,19 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { imageBase64, prompt } = body;
 
-    // Validate input
     if (!imageBase64 || !prompt) {
-      return Response.json(
-        { error: 'Missing required fields: imageBase64 and prompt' },
-        { status: 400 }
-      );
+      return new Response(JSON.stringify({ error: "Missing required fields: imageBase64 and prompt" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    // Get API key from server-side environment variables
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return Response.json(
-        { error: 'Gemini API key is not configured on the server' },
-        { status: 500 }
-      );
+      return new Response(JSON.stringify({ error: "Gemini API key is not configured on the server" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     const ai = new GoogleGenAI({ apiKey });
@@ -40,88 +57,133 @@ export async function POST(request: Request) {
     const cleanBase64 = imageBase64.replace(/^data:image\/(png|jpeg|webp|heic);base64,/, '');
 
     // Build enforcement prompt
-    const enforcementPrompt = `
-    TASK: Edit the provided image based on the USER INSTRUCTION below.
-    
-    STRICT RULES:
-    1. Identity Preservation: You MUST maintain the core identity, facial features, and key characteristics of the main subject. The person must remain recognizable.
-    2. Composition: Preserve the original image's angle, pose, and composition unless explicitly told to change it.
-    3. Creativity: If a style is requested, apply it vividly and artistically.
-    4. Output: Generate a high-quality, visually striking image.
+    const enforcementPrompt = `TASK: Edit the provided image based on the USER INSTRUCTION below.
+STRICT RULES:
+1. Identity Preservation: You MUST maintain the core identity, facial features, and key characteristics of the main subject. The person must remain recognizable.
+2. Composition: Preserve the original image's angle, pose, and composition unless explicitly told to change it.
+3. Creativity: If a style is requested, apply it vividly and artistically.
+4. Output: Generate a high-quality, visually striking image.
+USER INSTRUCTION: ${prompt}`;
 
-    USER INSTRUCTION: ${prompt}
-  `;
+    const contents = [
+      { text: enforcementPrompt },
+      { inlineData: { mimeType, data: cleanBase64 } },
+    ];
+    const config = {
+      responseModalities: ['TEXT', 'IMAGE'],
+      imageConfig: { aspectRatio: '4:3', imageSize: '2K' },
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+    };
 
-    // Call Gemini API
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-image-preview',
-      contents: {
-        parts: [
-          { text: enforcementPrompt },
-          { inlineData: { mimeType: mimeType, data: cleanBase64 } },
-        ],
-      },
-      config: {
-        responseModalities: ['IMAGE', 'TEXT'],
-        imageConfig: {
-          imageSize: '2K', // Use 2K resolution to balance quality and cost (~$0.134/image vs $0.24 for 4K)
-        },
-        generationConfig: {
-          maxOutputTokens: MAX_OUTPUT_TOKENS,
-        },
-      },
+      contents,
+      config,
     });
 
-    // Parse response
     let generatedImage: string | undefined;
     let generatedText: string | undefined;
 
-    const candidate = response.candidates?.[0];
-    
-    if (candidate?.content?.parts) {
-      for (const part of candidate.content.parts) {
-        if (part.inlineData) {
-          generatedImage = `data:image/png;base64,${part.inlineData.data}`;
-        } else if (part.text) {
-          generatedText = part.text;
+    function toBase64(raw: unknown): string | undefined {
+      if (typeof raw === 'string') return raw;
+      if (typeof Uint8Array !== 'undefined' && raw instanceof Uint8Array) return Buffer.from(raw).toString('base64');
+      if (typeof ArrayBuffer !== 'undefined' && raw instanceof ArrayBuffer) return Buffer.from(raw).toString('base64');
+      return undefined;
+    }
+
+    function parseParts(parts: unknown[]): void {
+      if (!parts || !Array.isArray(parts)) return;
+      for (const part of parts) {
+        const p = part as Record<string, unknown>;
+        const blob = (p.inlineData ?? p.inline_data) as { data?: unknown; mimeType?: string; mime_type?: string } | undefined;
+        if (blob) {
+          const b64 = toBase64(blob.data);
+          if (b64) {
+            const mime = blob.mimeType || blob.mime_type || 'image/png';
+            generatedImage = `data:${mime};base64,${b64}`;
+          }
+        } else if (p.text && typeof p.text === 'string') {
+          generatedText = p.text;
         }
       }
     }
 
+    const candidate = response.candidates?.[0];
+    if (candidate?.content?.parts) {
+      parseParts(candidate.content.parts);
+    }
+
+    // Fallbacks: SDK getters that exclude or merge parts (e.g. thought vs final)
+    const resp = response as { text?: string; data?: string };
+    if (!generatedText && typeof resp.text === 'string' && resp.text.trim()) generatedText = resp.text;
+    if (!generatedImage && typeof resp.data === 'string' && resp.data.length > 0) generatedImage = `data:image/png;base64,${resp.data}`;
+
     if (!generatedImage && !generatedText) {
-      return Response.json(
-        { error: "No content generated from Gemini API." },
-        { status: 500 }
-      );
+      const fb = (response as { promptFeedback?: { blockReason?: string; blockReasonMessage?: string } }).promptFeedback;
+      const fr = candidate?.finishReason as string | undefined;
+      if (fb?.blockReason) {
+        const msg = fb.blockReasonMessage || fb.blockReason || 'Content was blocked by safety filters.';
+        return new Response(JSON.stringify({ error: `Request blocked: ${msg}` }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      const debug = {
+        hasCandidates: !!response.candidates?.length,
+        numCandidates: response.candidates?.length ?? 0,
+        hasContent: !!candidate?.content,
+        numParts: candidate?.content?.parts?.length ?? 0,
+        firstPartKeys: candidate?.content?.parts?.[0] ? Object.keys(candidate.content.parts[0] as object) : undefined,
+        finishReason: fr,
+        hasResponseText: typeof resp.text === 'string' && resp.text.length > 0,
+        hasResponseData: typeof resp.data === 'string' && resp.data.length > 0,
+      };
+      console.warn('[image-edit] No content from Gemini. Debug:', JSON.stringify(debug));
+      return new Response(JSON.stringify({
+        error: "No content generated from Gemini API. The model returned no image or text. Try a different prompt or image.",
+        debug: process.env.NODE_ENV !== 'production' ? debug : undefined,
+      }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    // Return success response
-    return Response.json({ image: generatedImage, text: generatedText });
+    return new Response(JSON.stringify({ image: generatedImage, text: generatedText }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
 
-  } catch (error: any) {
-    console.error("Gemini API Error:", error);
-    
-    // Handle specific error cases
-    const errorMessage = error?.message || error?.toString?.() || String(error);
-    
-    if (errorMessage.includes("Requested entity was not found") || errorMessage.includes("API key")) {
-      return Response.json(
-        { error: 'Invalid or missing API key' },
-        { status: 401 }
-      );
-    }
-    
-    if (errorMessage.includes("quota") || errorMessage.includes("429")) {
-      return Response.json(
-        { error: 'Rate limit exceeded. Please try again later.' },
-        { status: 429 }
-      );
+  } catch (error: unknown) {
+    const err = error as { message?: string; status?: number; statusCode?: number };
+    const errorMessage = err?.message || (error != null ? String(error) : "Unknown error");
+    console.error("Gemini API Error:", errorMessage, error);
+
+    if (typeof errorMessage === "string") {
+      if (errorMessage.includes("Requested entity was not found") || errorMessage.includes("API key") || errorMessage.includes("API_KEY")) {
+        return new Response(JSON.stringify({ error: "Invalid or missing API key" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (errorMessage.includes("quota") || errorMessage.includes("429") || errorMessage.includes("Resource Exhausted")) {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
+          status: 429,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (errorMessage.includes("model") || errorMessage.includes("not found") || errorMessage.includes("404")) {
+        return new Response(
+          JSON.stringify({
+            error: `Model or request error: ${errorMessage}.`,
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
     }
 
-    // Generic error
-    return Response.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }

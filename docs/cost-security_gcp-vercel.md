@@ -113,34 +113,31 @@ Goal: Small, simple safeguards inside your app with minimal coding.
 
 ### a) Cap Gemini response size per request
 
-In your `/api/image-edit` handler, always set a maximum output size:
+In your `/api/image-edit` handler, set a maximum output size so each request has a bounded worst‑case cost:
 
 ```ts
-const MAX_OUTPUT_TOKENS = 512; // Limit output tokens to control costs per request
+// 2K image ≈1120 tokens; 8192 allows image + thinking + text. Lower values (e.g. 512) cause
+// finishReason: MAX_TOKENS and empty parts—the model is cut off before the image is emitted.
+const MAX_OUTPUT_TOKENS = 8192;
 
 const response = await ai.models.generateContent({
   model: 'gemini-3-pro-image-preview',
-  contents: {
-    parts: [
-      { text: enforcementPrompt },
-      { inlineData: { mimeType: mimeType, data: cleanBase64 } },
-    ],
-  },
+  contents: [
+    { text: enforcementPrompt },
+    { inlineData: { mimeType, data: cleanBase64 } },
+  ],
   config: {
-    responseModalities: ['IMAGE', 'TEXT'],
-    imageConfig: {
-      imageSize: '2K', // Use 2K resolution to balance quality and cost
-    },
-    generationConfig: {
-      maxOutputTokens: MAX_OUTPUT_TOKENS,
-    },
+    responseModalities: ['TEXT', 'IMAGE'],
+    imageConfig: { aspectRatio: '4:3', imageSize: '2K' },
+    maxOutputTokens: MAX_OUTPUT_TOKENS,
   },
 });
 ```
 
 Effect:  
-- Even when requests are allowed, each one has a bounded worst‑case cost.  
-- Combined with GCP quotas, this keeps per‑user and per‑day costs predictable.
+- **8192** is the ceiling; you are charged only for tokens actually generated. A 2K image is **1,120 tokens** (fixed); the rest is headroom for thinking and optional text.  
+- Even in the worst case (e.g. long text + image), output is capped at 8192 tokens (~\$0.10), so each request has a bounded cost.  
+- Combined with GCP quotas, this keeps per‑user and per‑day costs predictable.  
 - The `maxOutputTokens` limit is enforced server-side in the API route.
 
 ### b) Use environment variables for keys
@@ -197,6 +194,16 @@ Local Development Flow:
 Vercel WAF (Web Application Firewall) rules run on **Vercel's edge network**, not on your local machine. When you run `vercel dev` locally, requests go directly to your local serverless function and bypass Vercel's edge infrastructure where WAF rules are enforced.
 
 **This means:** WAF rate limiting configured in Step 2b will only take effect after you deploy to Vercel production. For local development, you would need to implement rate limiting in code if you want to test it locally.
+
+### Local development: API key from `.env.local`
+
+You do **not** need to deploy to Vercel to run the app. For local development:
+
+1. Put `GEMINI_API_KEY=your_key` in `.env.local` at the project root.
+2. Run `npm run dev:vercel` (which runs `vercel dev`). This serves both the app and the `/api/image-edit` serverless route.
+3. The API route reads `GEMINI_API_KEY` from `process.env`. Vercel CLI loads `.env.local` into the environment; if it does not inject it into the serverless process, the route falls back to loading `.env.local` via `dotenv`. The key is only used to call Google’s Gemini API; all LLM processing happens on Google’s servers, where the key is validated.
+
+Production on Vercel uses `GEMINI_API_KEY` from Vercel Project Settings → Environment Variables; `.env.local` is not deployed.
 
 ### Summary
 
@@ -291,6 +298,8 @@ For `gemini-3-pro-image-preview` at 2K resolution:
 - Text: ~15 tokens (optional)
 - **Total: ~1,135 tokens output**
 
+**Note on `maxOutputTokens`:** The API route sets `maxOutputTokens: 8192` so the model can finish the 2K image (~1,120 tokens) plus thinking and any text without being truncated (`finishReason: MAX_TOKENS`). You are **billed only for actual output**; the 8192 cap does not change the cost calculations below. Typical output remains ~1,120–1,135 tokens per request.
+
 ### Cost Calculation
 
 **Per-Request Cost:**
@@ -340,9 +349,13 @@ This means:
 
 **There is no token variability** in 2K image output—every generated 2K image costs approximately **$0.134** (1,120 tokens × $12.00 per 1M tokens).
 
-**Input Token Caps:**
+**Output cap (`maxOutputTokens: 8192`):**
 
-For extremely long prompts or very large input images, you can set additional safeguards:
+- The route sets `maxOutputTokens: 8192` so the 2K image (~1,120 tokens) plus thinking and text can complete. This also caps worst‑case output: `8,192 × ($12.00 / 1M) ≈ $0.10` if the model ever used the full ceiling. Typical output stays ~1,120–1,135 tokens.
+
+**Input token caps:**
+
+For extremely long prompts or very large input images:
 
 - Gemini 3 Pro Image Preview has a **maximum input limit of 65,536 tokens**
 - At $2.00 per million tokens, even hitting the maximum input would cost: `65,536 × ($2.00 / 1M) = $0.131`

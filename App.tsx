@@ -15,6 +15,8 @@ const App: React.FC = () => {
   const [apiKeyVerified, setApiKeyVerified] = useState(false);
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
+  const [previousOriginal, setPreviousOriginal] = useState<string | null>(null);
+  const [previousCurrent, setPreviousCurrent] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [requestCount, setRequestCount] = useState(0);
@@ -93,15 +95,32 @@ const App: React.FC = () => {
   }, []);
 
   const handleReplaceImage = useCallback(() => {
-    // Reset to show uploader, allowing user to upload a new image
+    setPreviousOriginal(originalImage);
+    setPreviousCurrent(currentImage);
     setOriginalImage(null);
     setCurrentImage(null);
     setMessages([]);
-  }, []);
+  }, [originalImage, currentImage]);
 
-  const handleReset = useCallback(() => {
-    if (originalImage) setCurrentImage(originalImage);
-  }, [originalImage]);
+  const handleCancelReplace = useCallback(() => {
+    if (!previousOriginal) return;
+    setOriginalImage(previousOriginal);
+    setCurrentImage(previousCurrent ?? previousOriginal);
+    setPreviousOriginal(null);
+    setPreviousCurrent(null);
+  }, [previousOriginal, previousCurrent]);
+
+  const handleReset = useCallback(async () => {
+    try {
+      const base64 = await loadImageAsBase64(DEFAULT_IMAGE_PATH);
+      setOriginalImage(base64);
+      setCurrentImage(base64);
+      setMessages([{ id: 'init', role: Role.MODEL, text: "Awesome photo! Select a style or type your request below.", timestamp: Date.now() }]);
+      setRequestCount(0);
+    } catch (e) {
+      console.warn('Could not load default image:', e);
+    }
+  }, []);
 
   const handleSendMessage = async (text: string) => {
     if (requestCount >= MAX_SESSION_REQUESTS) {
@@ -148,7 +167,10 @@ const App: React.FC = () => {
                 </div>
               </div>
             ) : !currentImage ? (
-              <ImageUploader onImageSelect={handleImageSelect} />
+              <ImageUploader
+                onImageSelect={handleImageSelect}
+                onCancel={previousOriginal ? handleCancelReplace : undefined}
+              />
             ) : (
               <ImagePreview 
                 originalImage={originalImage!}
@@ -156,6 +178,7 @@ const App: React.FC = () => {
                 isProcessing={isProcessing}
                 onReset={handleReset}
                 onReplaceImage={handleReplaceImage}
+                onCameraImage={handleImageSelect}
               />
             )}
           </div>
