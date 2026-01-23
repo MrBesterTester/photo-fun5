@@ -6,6 +6,9 @@ import { GoogleGenAI } from "@google/genai";
  * 
  * Vercel serverless function using Web Standard API (Request/Response)
  */
+
+const MAX_OUTPUT_TOKENS = 512; // Limit output tokens to control costs per request
+
 export async function POST(request: Request) {
   try {
     // Parse request body
@@ -64,7 +67,7 @@ export async function POST(request: Request) {
           imageSize: '2K', // Use 2K resolution to balance quality and cost (~$0.134/image vs $0.24 for 4K)
         },
         generationConfig: {
-          maxOutputTokens: 512, // Limit output tokens to control costs per request
+          maxOutputTokens: MAX_OUTPUT_TOKENS,
         },
       },
     });
