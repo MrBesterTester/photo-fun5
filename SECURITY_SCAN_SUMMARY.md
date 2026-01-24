@@ -11,7 +11,7 @@ The CI workflow (`.github/workflows/ci.yml`) now includes a dedicated `security-
 ### 1. **Dependency Vulnerability Scanning (npm audit)**
    - Checks for known vulnerabilities in npm dependencies
    - Runs with `--audit-level=moderate` to catch moderate and above severity issues
-   - Non-blocking (uses `|| true`) to report issues without failing the build
+   - Non-blocking (uses `continue-on-error: true`) to report issues without failing the build
 
 ### 2. **CodeQL Static Analysis**
    - Performs advanced code security analysis
