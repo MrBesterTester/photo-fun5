@@ -224,38 +224,38 @@ If you haven't created a GitHub repository for this project yet:
    - Click **Create repository**
 
 3. **Connect your local repo to GitHub:**
-
-   **Option A: Using SSH (recommended):**
    ```bash
    git remote add origin git@github.com:MrBesterTester/photo-fun5.git
    ```
 
-   **Option B: Using HTTPS:**
-   ```bash
-   git remote add origin https://github.com/MrBesterTester/photo-fun5.git
-   ```
-
-Use your own GitHub username or organization in the URLs above if different from MrBesterTester.
+   Use your own GitHub username or organization in the URL above if different from MrBesterTester.
 
 ### Step 3.5: Set Up SSH Authentication (Optional but Recommended)
 
-Using SSH with 1Password (or your preferred agent) avoids credential prompts:
+**If you already have an SSH key:** Run this to verify it works with GitHub:
+
+```bash
+ssh -T git@github.com
+```
+
+If you see `Hi <username>! You've successfully authenticated...`, you're set—use the SSH remote from Step 3 and skip the steps below.
+
+**If the test fails or you don't have a key yet:**
 
 1. **Generate SSH Key** (e.g. in 1Password: New Item → SSH Key → Generate; or `ssh-keygen -t ed25519`).
 2. **Add the public key to GitHub:** https://github.com/settings/keys → **New SSH key**.
 3. **Use 1Password as SSH Agent** (if applicable): 1Password → Preferences → Developer → “Use 1Password as SSH Agent”.
-4. **Test:** `ssh -T git@github.com`
-5. **Set remote to SSH if you used HTTPS:**  
-   `git remote set-url origin git@github.com:MrBesterTester/photo-fun5.git`
+4. **Test again:** `ssh -T git@github.com`
 
 ### Step 4: Push and Test
 
 1. **Commit and push:**
    ```bash
-   git add .github/
+   git add ./.github/
    git commit -m "Add GitHub Actions CI workflow"
    git push origin main
    ```
+   (The folder is `.github` with a leading dot—use `./.github/` or `.github/`, not `github`.)
 
 2. **Watch it run:**
    - Go to: `https://github.com/MrBesterTester/photo-fun5/actions`
