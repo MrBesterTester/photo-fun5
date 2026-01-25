@@ -77,6 +77,7 @@ The intended flow: develop and test locally with the Vercel CLI → commit → *
 │  5. Automatically runs:                                     │
 │     - Type check (tsc --noEmit)                             │
 │     - Build (vite build)                                     │
+│     - Security scan (npm audit + CodeQL)                    │
 │  6. Reports: ✅ PASS or ❌ FAIL                              │
 └─────────────────┬───────────────────────────────────────────┘
                   │
@@ -187,13 +188,49 @@ jobs:
           name: dist
           path: dist/
           retention-days: 7
+
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
 ```
 
 **What this does:**
 - Runs on every push to `main`/`master` and on pull requests
-- Installs Node.js 20 with npm caching
-- Runs type checking (`tsc --noEmit`) and build (`vite build`)
-- Uploads `dist/` for 7 days (optional; Vercel builds its own when deploying)
+- **Build and Test Job:**
+  - Installs Node.js 20 with npm caching
+  - Runs type checking (`tsc --noEmit`) and build (`vite build`)
+  - Uploads `dist/` for 7 days (optional; Vercel builds its own when deploying)
+- **Security Scan Job:**
+  - Runs npm audit to check for dependency vulnerabilities
+  - Performs CodeQL analysis to detect security vulnerabilities in the code
+  - Results are uploaded to GitHub Security tab for review
 
 **Note:** The API key `GEMINI_API_KEY` is not needed in CI. It is only used at **runtime** in the Vercel serverless function (`api/image-edit.ts`) and is set in Vercel Project Settings → Environment Variables. The Vite build does not embed the key in client bundles.
 
@@ -341,6 +378,8 @@ If you see `Hi <username>! You've successfully authenticated...`, you're set—u
 **In CI:**
 - ✅ TypeScript type checking (`tsc --noEmit`)
 - ✅ Application build (`npm run build` / `vite build`)
+- ✅ Security scanning (npm audit for dependency vulnerabilities)
+- ✅ CodeQL analysis for code security vulnerabilities
 
 **Not in CI:**
 - ❌ Linting (add `npm run lint` when you add ESLint)
