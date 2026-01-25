@@ -9,6 +9,7 @@ Here's a focused, admin‑driven plan using only **GCP** (for Gemini) and **Verc
 - [2. Vercel: Edge Rate Limiting via Admin UI](#2-vercel-edge-rate-limiting-via-admin-ui)
   - [a) Deploy your existing app to Vercel](#a-deploy-your-existing-app-to-vercel)
   - [b) Add a WAF rate‑limit rule for your image editing endpoint](#b-add-a-waf-ratelimit-rule-for-your-image-editing-endpoint)
+  - [c) Add Bot Protection and AI Bots managed rulesets](#c-add-bot-protection-and-ai-bots-managed-rulesets)
 - [3. Minimal App‑Side Settings (One-Time)](#3-minimal-appside-settings-one-time)
   - [a) Cap Gemini response size per request](#a-cap-gemini-response-size-per-request)
   - [b) Use environment variables for keys](#b-use-environment-variables-for-keys)
@@ -149,6 +150,22 @@ Effect:
 
 You can later tune the numbers based on logs (e.g., more generous for logged‑in users, stricter for anonymous).
 
+### c) Add Bot Protection and AI Bots managed rulesets
+
+Reduce scripted, headless, and AI-crawler traffic before it reaches the app or consumes the rate limit. This complements the Step 2b rate limit: Bot Protection challenges traffic that does not behave like a real browser (e.g. curl, scripts, headless automation); AI Bots blocks known AI crawlers (GPTBot, ClaudeBot, PerplexityBot, etc.).
+
+**Steps:**
+
+1. In the Vercel project: **Firewall** tab → **Rules** tab.
+2. Under **Bot Management**:
+   - **Bot Protection:** set to **Challenge** (serves a JavaScript challenge to non-browser-like traffic; real users in normal browsers pass).
+   - **AI Bots:** set to **Deny** (or **Log** to observe first).
+3. **Review Changes** → **Publish**.
+
+**References:** [Vercel Bot Management](https://vercel.com/docs/bot-management); [Configure bot protection](https://vercel.com/docs/vercel-waf/managed-rulesets#configure-bot-protection-managed-ruleset); [Configure AI Bots](https://vercel.com/docs/vercel-waf/managed-rulesets#configure-ai-bots-managed-ruleset).
+
+**Important:** Bot Protection does **not** work when a reverse proxy (e.g. Cloudflare, Azure Front Door) is placed in front of your Vercel deployment. Keep traffic hitting Vercel’s edge directly if you rely on it.
+
 ***
 
 ## 3. Minimal App‑Side Settings (One-Time)
@@ -209,6 +226,7 @@ When running locally with `vercel dev` versus deploying to Vercel production, di
 |----------------|------------------|------------------------|-------|
 | **Step 1a: Gemini rate limits (AI Studio)** | ✅ Yes | ✅ Yes | Google enforces RPM/TPM/RPD by tier; view in AI Studio |
 | **Step 2b: Vercel WAF** | ❌ No | ✅ Yes | Only applies to requests through Vercel's edge network |
+| **Step 2c: Bot Protection / AI Bots** | ❌ No | ✅ Yes | Managed rulesets at the edge; challenge non-browser traffic, deny AI crawlers |
 | **Step 3a: `maxOutputTokens`** | ✅ Yes | ✅ Yes | Code-level enforcement works everywhere |
 
 ### Why Gemini rate limits apply locally
@@ -253,6 +271,7 @@ Production on Vercel uses `GEMINI_API_KEY` from Vercel Project Settings → Envi
 
 - **Gemini rate limits (Step 1a):** Enforced by Google in both local and production; view and manage in **AI Studio**. Limits are tier-based; for a ~5 RPD cost target, use Vercel WAF and/or app-side caps.
 - **Vercel WAF (Step 2b):** Only active in production, providing edge-level throttling of `/api/image-edit`.
+- **Bot Protection / AI Bots (Step 2c):** Only active in production; challenge non-browser traffic, deny AI crawlers. Does not work with a reverse proxy in front of Vercel.
 - **Code-level limits (Step 3a):** Active everywhere, providing per-request cost bounds.
 
 This layered approach gives you cost protection via app and Vercel limits, with Gemini’s tier limits as a ceiling, and budget alerts as a backstop.
@@ -268,6 +287,9 @@ With almost everything done via admin config:
 
 - **Vercel WAF rate limit:**  
   - Per‑IP throttling of `/api/image-edit` without touching your app code.[6][4]
+
+- **Vercel Bot Management (Step 2c):**  
+  - Bot Protection (Challenge) and AI Bots (Deny) to block scripted and AI-crawler traffic before it reaches the app or rate limit. Do not put a reverse proxy in front of Vercel if using Bot Protection.
 
 - **Minimal app code:**  
   - Just a `maxOutputTokens` cap in the API route (plus your existing Gemini integration).
@@ -483,6 +505,7 @@ Budget alerts give early warning if spending deviates from projections; Vercel W
 
 ✅ **View rate limits and usage in [Google AI Studio → Usage](https://aistudio.google.com/usage)** (Rate limit tab); [Rate limits](https://ai.google.dev/gemini-api/docs/rate-limits) docs. Tier 1 RPD for `gemini-3-pro-image-preview` may show **20** in AI Studio (4× your ~5 RPD target); Google's limit is not the bottleneck.  
 ✅ **Use Vercel WAF** (Step 2b) to throttle `/api/image-edit` (e.g. per-IP) so you stay near ~5 requests/day.  
+✅ **Enable Bot Protection (Challenge) and AI Bots (Deny)** in Vercel Firewall → Rules → Bot Management; do not put a reverse proxy in front of Vercel if using Bot Protection. See [Bot Management](https://vercel.com/docs/bot-management).  
 ✅ **Create $20/month GCP budget** with alerts at $15 (75%) and $18 (90%).  
 ✅ **Expected usage**: ~149 requests/month at ~$20 if throttled to ~5/day; per-request ~$0.134 (2K).  
 ✅ **"Killer request" risk**: Minimal (fixed 1,120-token 2K image output).  
