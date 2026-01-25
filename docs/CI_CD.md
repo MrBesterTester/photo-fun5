@@ -249,10 +249,10 @@ If you see `Hi <username>! You've successfully authenticated...`, you're set—u
 
 ### Step 4: Push and Test
 
-1. **Commit and push:**
+1. **Commit all outstanding work with message and then push to the remote repo:**
    ```bash
    git add ./.github/
-   git commit -m "Add GitHub Actions CI workflow"
+   git commit -m "<your commit message>"
    git push origin main
    ```
    (The folder is `.github` with a leading dot—use `./.github/` or `.github/`, not `github`.)
