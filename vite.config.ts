@@ -14,7 +14,10 @@ export default defineConfig(({ mode }) => {
         // API key is now server-side only - not exposed to client
         // GEMINI_API_KEY should be set in Vercel Project Settings → Environment Variables
         __BUILD_DATE__: JSON.stringify(
-          new Date().toISOString().slice(0, 16).replace('T', '_')
+          new Date()
+            .toLocaleString('sv-SE', { timeZone: 'America/Los_Angeles', hour12: false })
+            .replace(' ', '_')
+            .slice(0, 16)
         ),
       },
       resolve: {
