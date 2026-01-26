@@ -30,7 +30,11 @@
 - [Custom Domain Configuration (Vercel)](#custom-domain-configuration-vercel)
   - [Overview](#overview)
   - [Setup Procedure](#setup-procedure)
-  - [Troubleshooting](#troubleshooting-1)
+  - [Updating DNS on Microsoft 365](#updating-dns-on-microsoft-365)
+  - [Manual DNS Checks](#manual-dns-checks)
+  - [Troubleshooting Domain Setup](#troubleshooting-domain-setup)
+  - [SSL Certificate Management](#ssl-certificate-management)
+  - [Quick Reference Card](#quick-reference-card)
 
 <!-- /TOC -->
 
@@ -88,7 +92,7 @@ The intended flow: develop and test locally with the Vercel CLI → commit → *
 │  VERCEL (automatic, no GitHub Actions deploy job)           │
 │                                                               │
 │  7. Vercel sees push to main, runs its own build, deploys.   │
-│  8. App is live at: https://your-project.vercel.app          │
+│  8. App is live at: https://photo-fun5.vercel.app          │
 │     - Frontend: Vite app                                     │
 │     - API: /api/image-edit (serverless, calls Gemini)       │
 └─────────────────────────────────────────────────────────────┘
@@ -361,7 +365,7 @@ If you see `Hi <username>! You've successfully authenticated...`, you're set—u
 4. **Vercel** runs `npm install` and `npm run build`, then deploys:
    - Static assets from `dist/`
    - Serverless function from `api/image-edit.ts` at `/api/image-edit`
-5. **App is live** at `https://your-project.vercel.app`
+5. **App is live** at `https://photo-fun5.vercel.app`
 
 **Timeline:**
 - CI: ~1–2 minutes after push
@@ -491,11 +495,11 @@ git push
 
 ### Overview
 
-You can serve the app from your own domain (e.g. `photo-fun.example.com`) via Vercel. Vercel provides **free SSL** (Let’s Encrypt) and handles renewals.
+You can serve the app from your own domain (e.g. `photo-fun.samkirk.com`) via Vercel. Vercel provides **free SSL** (Let’s Encrypt) and handles renewals.
 
 **Architecture:**
 ```
-User → photo-fun.example.com
+User → photo-fun.samkirk.com
          ↓ (DNS: CNAME or A)
        Vercel edge
          ↓
@@ -506,33 +510,157 @@ User → photo-fun.example.com
 
 1. **Vercel: Add domain**
    - Project → **Settings → Domains**
-   - **Add** e.g. `photo-fun.example.com`
+   - **Add** e.g. `photo-fun.samkirk.com`
    - Vercel will show the required DNS record (often a CNAME to `cname.vercel-dns.com` or an A record).
 
 2. **DNS: Create the record**
-   - At your DNS provider (e.g. Cloudflare, Namecheap, Microsoft 365), add:
+   - At your DNS provider (Microsoft 365), add: **For Microsoft 365:** see [Updating DNS on Microsoft 365](#updating-dns-on-microsoft-365) below for step-by-step instructions.
      - **CNAME:** `photo-fun` (or the subdomain you use) → `cname.vercel-dns.com`  
        **or**
      - **A:** `@` or the subdomain → the IP Vercel gives you.
 
 3. **Verify**
    - In Vercel → Domains, wait for “Valid” (propagation can take minutes to 48 hours).
-   - Visit `https://photo-fun.example.com`; SSL is handled by Vercel.
+   - Visit `https://photo-fun.samkirk.com`; SSL is handled by Vercel.
 
 **Vercel docs:** [Add a domain](https://vercel.com/docs/concepts/projects/domains)
 
-### Troubleshooting
+### Updating DNS on Microsoft 365
 
-**Domain “Invalid” or not resolving:**
-- Confirm the CNAME or A record matches exactly what Vercel shows.
-- Use [dnschecker.org](https://dnschecker.org) or `dig` to confirm propagation.
+1. **Where to go**
+   - Go to [admin.cloud.microsoft.com](https://admin.cloud.microsoft.com).
+   - Go to **Settings → Domains**, then click your domain (e.g. `samkirk.com`).
+   - Open **DNS records** or **Manage DNS**.
 
-**SSL / “Connection not private”:**
+2. **Assisted path (optional)**
+   - If there is an assisted or guided flow for adding custom DNS records, use it to add a CNAME.
+   - If not, continue with the manual steps below.
+
+3. **Add a CNAME record**
+   - **Type:** CNAME (or equivalent).
+   - **Host name / Alias:** only the subdomain (e.g. `photo-fun` for `photo-fun.samkirk.com`). Do not include the domain.
+   - **Points to address / Target:** the CNAME target Vercel shows when you add the domain in **Project → Settings → Domains** (often `cname.vercel-dns.com`). Do not include `https://` or a trailing dot.
+   - **TTL:** 3600 (1 hour) or leave default.
+
+4. **Save**
+   - Click **Save** or **Add**.
+
+5. **Note**
+   - If you do not see an assisted path, look for **+ Add** or **Add record**, or scroll to **Custom records** / **Other records**.
+
+### Manual DNS Checks
+
+#### Check CNAME record
+
+```bash
+# Mac/Linux
+dig CNAME photo-fun.samkirk.com
+
+# Expected output (CNAME to Vercel):
+# photo-fun.samkirk.com. 3600 IN CNAME cname.vercel-dns.com.
+
+# macOS alternative
+nslookup -type=CNAME photo-fun.samkirk.com
+```
+
+**Online tools:**
+- https://dnschecker.org/
+- https://www.whatsmydns.net/
+
+Search for your domain (e.g. `photo-fun.samkirk.com`) with Type: CNAME.
+
+#### Step-by-step manual checks
+
+```bash
+# 1. Check DNS resolution
+dig +short photo-fun.samkirk.com
+
+# 2. Check CNAME record
+dig CNAME +short photo-fun.samkirk.com
+
+# 3. Test HTTP access
+curl -I http://photo-fun.samkirk.com
+
+# 4. Test HTTPS access
+curl -I https://photo-fun.samkirk.com
+
+# 5. Test in browser
+# Visit: https://photo-fun.samkirk.com
+```
+
+### Troubleshooting Domain Setup
+
+**Problem: Domain stays "Invalid" in Vercel**
+
+**Error:** Vercel cannot verify domain ownership; domain shows as Invalid in **Project → Settings → Domains**.
+
+**Solution:**
+- Use [Manual DNS Checks](#manual-dns-checks) above to verify the CNAME (or A) record.
+- Ensure the record matches **exactly** what Vercel shows when you add the domain (e.g. `cname.vercel-dns.com` for CNAME, no `https://` or trailing dot).
+- Wait for propagation (can take minutes up to 48 hours). Use [dnschecker.org](https://dnschecker.org) to check from multiple locations.
+- After DNS is correct, Vercel will verify and show "Valid"; no extra step.
+
+**Causes:** DNS not propagated yet (most common), CNAME or A record incorrect, TTL very long.
+
+**Problem: Browser shows security warning**
+
+**Error:** "Your connection is not private" or "NET::ERR_CERT_COMMON_NAME_INVALID"
+
+**Solution:**
 - Wait for Vercel to issue the certificate (often a few minutes after DNS is correct).
-- Ensure you’re using the domain exactly as added in Vercel (with or without `www` as configured).
+- In Vercel → **Settings → Domains**, confirm the domain shows "Valid".
+- Ensure you are using the domain exactly as added in Vercel (with or without `www` as configured).
+
+**Problem: Site not loading**
+
+**Symptoms:** DNS_PROBE_FINISHED_NXDOMAIN or similar; domain does not resolve.
+
+**Solution:**
+- **Check CNAME exists:** `dig CNAME photo-fun.samkirk.com` (or your domain).
+- **Verify the app is reachable** at your default Vercel URL (e.g. `https://photo-fun5.vercel.app`):
+  ```bash
+  curl -I https://photo-fun5.vercel.app
+  ```
+- **Check DNS from multiple locations:** [dnschecker.org](https://dnschecker.org).
+
+### SSL Certificate Management
+
+**View domains and status:**
+- In Vercel: **Project → Settings → Domains**. Each added domain shows status (e.g. Valid, Invalid, Pending).
+
+**Add (request certificate):**
+- Adding a domain in **Settings → Domains** triggers Vercel to request a Let's Encrypt certificate once DNS is valid. No separate "add certificate" step.
+
+**Remove:**
+- In **Settings → Domains**, remove the domain. The certificate is removed with it.
+
+**Certificate auto-renewal:**
+- Vercel automatically renews Let's Encrypt certificates before expiration (typically 90 days). No manual intervention needed.
+
+**Manual check (certificate expiration):**
+```bash
+echo | openssl s_client -servername photo-fun.samkirk.com \
+  -connect photo-fun.samkirk.com:443 2>/dev/null | \
+  openssl x509 -noout -dates
+```
+
+### Quick Reference Card
+
+**Setup checklist:**
+
+- [ ] **Vercel:** Project → **Settings → Domains** → **Add** your domain (e.g. `photo-fun.samkirk.com`). Note the CNAME or A record Vercel shows.
+- [ ] **DNS:** Add the CNAME (or A) record at your DNS provider. For Microsoft 365, see [Updating DNS on Microsoft 365](#updating-dns-on-microsoft-365).
+  - CNAME: subdomain (e.g. `photo-fun`) → `cname.vercel-dns.com` (or the target Vercel shows).
+- [ ] **Wait:** In Vercel → Domains, wait for "Valid" (propagation can take minutes to 48 hours).
+- [ ] **Test:** Visit `https://photo-fun.samkirk.com` in a browser. SSL is handled by Vercel.
+
+**Support:**
+- [Vercel: Add a domain](https://vercel.com/docs/concepts/projects/domains)
 
 ---
 
 **Document version:** 1.0  
 **Project:** photo-fun5  
-**Deployment:** Vercel (GitHub-connected; `api/image-edit` serverless)
+**Deployment:** Vercel (GitHub-connected; `api/image-edit` serverless)  
+**Domain:** photo-fun.samkirk.com  
+**Vercel URL:** https://photo-fun5.vercel.app
