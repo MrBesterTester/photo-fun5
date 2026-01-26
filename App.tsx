@@ -21,6 +21,7 @@ const App: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [requestCount, setRequestCount] = useState(0);
   const [isLoadingDefault, setIsLoadingDefault] = useState(true);
+  const [cameraOpen, setCameraOpen] = useState(false);
 
   useEffect(() => {
     // Check if API route is available (API key is now server-side only)
@@ -122,6 +123,16 @@ const App: React.FC = () => {
     }
   }, []);
 
+  const handleSave = useCallback(() => {
+    if (!currentImage) return;
+    const link = document.createElement('a');
+    link.href = currentImage;
+    link.download = `photofun-edit-${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, [currentImage]);
+
   const handleSendMessage = async (text: string) => {
     if (requestCount >= MAX_SESSION_REQUESTS) {
        setMessages(prev => [...prev, { id: Date.now().toString(), role: Role.MODEL, text: ERROR_MESSAGES.quota, timestamp: Date.now() }]);
@@ -176,9 +187,10 @@ const App: React.FC = () => {
                 originalImage={originalImage!}
                 currentImage={currentImage}
                 isProcessing={isProcessing}
-                onReset={handleReset}
                 onReplaceImage={handleReplaceImage}
                 onCameraImage={handleImageSelect}
+                cameraOpen={cameraOpen}
+                onCloseCamera={() => setCameraOpen(false)}
               />
             )}
           </div>
@@ -187,6 +199,11 @@ const App: React.FC = () => {
                 messages={messages}
                 isProcessing={isProcessing}
                 onSendMessage={handleSendMessage}
+                showImageControls={!!currentImage}
+                onReset={handleReset}
+                onReplaceImage={handleReplaceImage}
+                onOpenCamera={() => setCameraOpen(true)}
+                onSave={handleSave}
              />
           </div>
       </main>

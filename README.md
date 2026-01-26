@@ -65,6 +65,7 @@ You may hit a quota limit or experience rate limiting if your usage is intense. 
 5. **Open your browser:**
    - The app will be available at `http://localhost:3000`
    - The API route will be available at `http://localhost:3000/api/image-edit`
+   - **Mobile testing:** Resize the window to ~390×700 (portrait) or use Chrome DevTools: F12 → Toggle device toolbar (Ctrl+Shift+M or Cmd+Shift+M) and pick a phone profile.
 
 ### Project Structure
 
