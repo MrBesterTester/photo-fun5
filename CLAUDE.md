@@ -94,6 +94,7 @@ Remind the user which model is recommended for the current step:
 - Push directly to `main` — no squash, no intermediate branches
 - Run `gitleaks detect --source .` before pushing to catch secrets
 - CI runs gitleaks + CodeQL on every push as a second gate
+- **`.gitleaks.toml` allowlist**: reCAPTCHA site keys (public by design) are allowlisted by commit hash. Format: `commits = ["sha1", "sha2"]` (simple string array, NOT TOML table arrays)
 - For one-time history scrubs (e.g., removing a leaked secret retroactively), use `git-filter-repo`
 
 ## Vercel Deployment Lessons
@@ -105,3 +106,7 @@ Remind the user which model is recommended for the current step:
 5. **Use project alias URL** for testing, not deployment-specific hash URLs
 6. **WAF rules are dashboard-only** — not configurable in `vercel.json`
 7. **Env var JSON encoding** — compact single-line JSON for credentials with newlines
+8. **GitHub secrets for CI deploy**: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` — set via `gh secret set`
+9. **Vercel tokens**: Must be created via dashboard (https://vercel.com/account/tokens), no CLI command
+10. **Re-run failed CI jobs**: `gh run rerun <run-id> --failed`
+11. **Project ID source of truth**: `.vercel/project.json` (org: `team_lAFd8eLgRO9IuivB7YwxiO3m`, project: `prj_9zF49tq1xRn9XGgXizo1DLUibgeE`)
