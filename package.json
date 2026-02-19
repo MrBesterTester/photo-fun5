@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@google/genai": "latest",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.36.2",
     "firebase": "^12.8.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",

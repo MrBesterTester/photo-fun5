@@ -2,6 +2,8 @@ import { readFileSync, existsSync } from "fs";
 import * as path from "path";
 import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
+import { Redis } from "@upstash/redis";
+import { Ratelimit } from "@upstash/ratelimit";
 
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
 
@@ -36,6 +38,23 @@ function loadEnvLocal(): void {
   } catch (_) {}
 }
 loadEnvLocal();
+
+// --- Rate limiter (Upstash Redis, sliding window) ---
+// Created at module level so the instance is reused across warm invocations.
+// If env vars are missing, ratelimit is null and requests pass through.
+let ratelimit: Ratelimit | null = null;
+if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  ratelimit = new Ratelimit({
+    redis: new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    }),
+    limiter: Ratelimit.slidingWindow(10, "600 s"), // 10 requests per 10 minutes
+    prefix: "@upstash/ratelimit:image-edit",
+  });
+} else {
+  console.warn("[image-edit] UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN not set — rate limiting disabled");
+}
 
 /** Verify reCAPTCHA token with Google's siteverify API. Returns true if valid. */
 async function verifyCaptcha(token: string): Promise<boolean> {
@@ -80,6 +99,23 @@ export async function POST(request: Request) {
         status: 403,
         headers: { "Content-Type": "application/json" },
       });
+    }
+
+    // Rate limit by IP (sliding window: 10 req / 10 min)
+    if (ratelimit) {
+      const forwarded = request.headers.get("x-forwarded-for");
+      const ip = forwarded ? forwarded.split(",")[0].trim() : "unknown";
+      const { success, reset } = await ratelimit.limit(ip);
+      if (!success) {
+        const retryAfterSec = Math.max(1, Math.ceil((reset - Date.now()) / 1000));
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again later." }), {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": String(retryAfterSec),
+          },
+        });
+      }
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
