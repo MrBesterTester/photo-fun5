@@ -1,0 +1,7 @@
+[allowlist]
+description = "reCAPTCHA site keys are public by design (embedded in client-side JS)"
+commits = [
+  "e75186a9ba4ef9b41e2622fb80acdd94f5476d88",
+  "7ceaab29997dffe41068a4e0b1e608d6e02cee56",
+  "1b6bd103959751b7a4012b6872fc46404a00c43f"
+]
