@@ -133,7 +133,7 @@ const App: React.FC = () => {
     document.body.removeChild(link);
   }, [currentImage]);
 
-  const handleSendMessage = async (text: string, captchaToken?: string) => {
+  const handleSendMessage = async (text: string, captchaToken: string) => {
     if (requestCount >= MAX_SESSION_REQUESTS) {
        setMessages(prev => [...prev, { id: Date.now().toString(), role: Role.MODEL, text: ERROR_MESSAGES.quota, timestamp: Date.now() }]);
        return;

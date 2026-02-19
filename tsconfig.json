@@ -25,6 +25,7 @@
         "./*"
       ]
     },
-    "noEmit": true
+    "noEmit": true,
+    "strict": true
   }
 }

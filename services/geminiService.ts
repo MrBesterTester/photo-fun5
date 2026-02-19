@@ -5,12 +5,8 @@
 export const editImageWithGemini = async (
   imageBase64: string,
   prompt: string,
-  captchaToken?: string
+  captchaToken: string
 ): Promise<{ image?: string; text?: string }> => {
-  if (!captchaToken) {
-    throw new Error('CAPTCHA verification is required. Please complete the CAPTCHA and try again.');
-  }
-
   try {
     const response = await fetch('/api/image-edit', {
       method: 'POST',
