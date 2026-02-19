@@ -1,0 +1,107 @@
+# Claude Code Instructions for photo-fun5
+
+## Dylan Davis 50+ Methodology
+
+This project follows the **Dylan Davis 50+ method** with three core documents:
+- `docs/SPECIFICATION.md` - What we're building
+- `docs/BLUEPRINT.md` - How to build it (step-by-step)
+- `docs/TODO.md` - Roadmap with checkboxes
+
+## Document Sets
+
+The project supports multiple document sets using a prefix convention:
+- **Default**: `docs/SPECIFICATION.md`, `docs/BLUEPRINT.md`, `docs/TODO.md`
+- **Prefixed**: `docs/{prefix}-SPECIFICATION.md`, `docs/{prefix}-BLUEPRINT.md`, `docs/{prefix}-TODO.md`
+- **Current prefixed set**: _(none active)_
+
+## When User Says "Continue" or "Continue with Step X.Y"
+
+**REQUIRED**: Before implementing any step, read all three documents:
+1. Read `docs/SPECIFICATION.md` for requirements context (or `docs/{prefix}-SPECIFICATION.md`)
+2. Read `docs/BLUEPRINT.md` for implementation guidance (or `docs/{prefix}-BLUEPRINT.md`)
+3. Read `docs/TODO.md` to find the specific step and its checklist items (or `docs/{prefix}-TODO.md`)
+
+Then:
+1. Find the step in TODO.md
+2. Implement each checklist item
+3. Run tests as specified
+4. Check off completed items in TODO.md
+
+## Dual Workflow: do-work + Dylan Davis
+
+This project uses the **do-work** skill for autonomous execution, bridged from the Dylan Davis methodology.
+
+### Planned Work (spec -> blueprint -> todo -> queue -> autonomous)
+1. Create docs: `/create-spec` -> `/create-blueprint` -> `/create-todo`
+2. Ingest into queue: `/ingest-todo` (converts TODO steps into do-work REQ files)
+3. Process autonomously: `do work run` (processes the queue)
+4. After completion: check off completed TODO items using `source_step` frontmatter from archived REQs
+
+### Ad-hoc Work (direct to queue)
+For bugs, ideas, or features outside any TODO cycle:
+- `do work fix the header overflow`
+- `do work add dark mode toggle`
+
+### Manual Fallback (human-in-the-loop)
+For steps needing visual testing, debugging, or human judgment:
+- `start step X.Y` or `start step X.Y {prefix}`
+- `continue step X.Y` or `continue step X.Y {prefix}`
+
+### Git Integration
+- do-work commits locally per REQ (granular history on working branch)
+- Push directly to remote after gitleaks scan passes (no squashing)
+
+## Model Preferences (from TODO.md)
+
+Remind the user which model is recommended for the current step:
+- **Frontend/UI work**: Claude Opus 4.5
+- **Backend/logic**: GPT-5.2 or Opus 4.5
+- **Debugging/visual/E2E tests**: Gemini 3 Pro
+- **Quick fixes**: Sonnet 4
+
+## Tech Stack
+
+- **Framework**: Vite + React 19 + TypeScript
+- **Styling**: Tailwind CSS (CDN)
+- **AI**: Google Gemini API (`@google/genai`)
+- **Backend**: Firebase (client-side SDK) + Vercel serverless functions (`api/`)
+- **Build output**: `dist/`
+- **Dev server**: `npm run dev` (Vite on port 3000)
+
+## Testing Conventions
+
+- **Type checking**: `npx tsc --noEmit`
+- **Build validation**: `npm run build`
+- **No unit test framework** — TypeScript type-check is the primary gate
+- **Always validate results**: After completing any action, verify with `npx tsc --noEmit` and `npm run build`
+
+## Key Project Rules
+
+1. **Type safety**: Strict TypeScript, no `any`
+2. **Security**: Never commit secrets; validate at API boundaries
+3. **Incremental delivery**: Small PR-sized changes
+4. **Avoid Gemini Pro 3 for file edits**: It may overwrite files with minimal content
+5. **Always validate results**: After completing any action, verify with some form of testing (Boris Cherny)
+
+## Browser Automation
+
+- **Playwright MCP server** (`--browser chrome`): Use for test automation, generally in headless mode
+- **Claude in Chrome extension**: Use for UI debugging, visual inspection, and making code changes
+- **Chrome vs Chromium**: These are different browsers. Never confuse the two.
+
+## Git Workflow
+
+- Push directly to `main` — no squash, no intermediate branches
+- Run `gitleaks detect --source .` before pushing to catch secrets
+- CI runs gitleaks + CodeQL on every push as a second gate
+- For one-time history scrubs (e.g., removing a leaked secret retroactively), use `git-filter-repo`
+
+## Vercel Deployment Lessons
+
+1. **Strip trailing `\n` from all Vercel env vars** — causes auth failures
+2. **Function timeout: 60s** for LLM API calls in `vercel.json`
+3. **Gate production deploys behind CI** — `ignoreCommand` in `vercel.json`
+4. **Health check via `vercel inspect`** — not curl (blocked by Deployment Protection on `.vercel.app`)
+5. **Use project alias URL** for testing, not deployment-specific hash URLs
+6. **WAF rules are dashboard-only** — not configurable in `vercel.json`
+7. **Env var JSON encoding** — compact single-line JSON for credentials with newlines
