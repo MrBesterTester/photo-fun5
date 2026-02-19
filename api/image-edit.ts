@@ -57,11 +57,29 @@ if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) 
 }
 
 // --- Spend cap (Upstash Redis, monthly cumulative) ---
-// Tracks cumulative estimated Gemini API spend per calendar month.
+// Tracks cumulative estimated Gemini API spend per calendar month using actual
+// token counts from Gemini usageMetadata (with a text-based fallback).
 // If env vars are missing, spend tracking is disabled and requests pass through.
 const MONTHLY_SPEND_CAP_CENTS = parseInt(process.env.MONTHLY_SPEND_CAP_CENTS || "2000", 10);
-const SPEND_PER_REQUEST_CENTS = 5; // conservative flat estimate per Gemini image-edit call
 const SPEND_KEY_TTL_SECONDS = 35 * 24 * 60 * 60; // 35 days — auto-expire after month rollover
+
+// Token-based pricing for Gemini image-edit model
+const COST_PER_1K_INPUT_TOKENS_USD = 0.00125;   // $1.25/1M input tokens
+const COST_PER_1K_OUTPUT_TOKENS_USD = 0.00375;   // $3.75/1M output tokens
+const MIN_COST_PER_REQUEST_CENTS = 1;             // 1 cent minimum floor
+
+/** Estimate LLM cost from token counts; returns cost in whole cents (rounded up). */
+function estimateLlmCost(inputTokens: number, outputTokens: number): number {
+  const inputCost = (inputTokens / 1000) * COST_PER_1K_INPUT_TOKENS_USD;
+  const outputCost = (outputTokens / 1000) * COST_PER_1K_OUTPUT_TOKENS_USD;
+  const totalCostCents = (inputCost + outputCost) * 100;
+  return Math.max(Math.ceil(totalCostCents), MIN_COST_PER_REQUEST_CENTS);
+}
+
+/** Conservative token estimate from text length (~4 chars per token). */
+function estimateTokensFromText(text: string): number {
+  return Math.ceil(text.length / 4);
+}
 
 let spendRedis: Redis | null = null;
 if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
@@ -266,14 +284,32 @@ USER INSTRUCTION: ${prompt}`;
       });
     }
 
-    // Increment monthly spend counter after successful Gemini response
+    // Increment monthly spend counter after successful Gemini response (token-based cost)
     if (spendRedis) {
       const now = new Date();
       const spendKey = `spend:${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
       try {
-        const newTotal = await spendRedis.incrby(spendKey, SPEND_PER_REQUEST_CENTS);
-        // Set TTL only when the key is first created (i.e. total equals first increment)
-        if (newTotal === SPEND_PER_REQUEST_CENTS) {
+        const usage = response.usageMetadata as
+          | { promptTokenCount?: number; candidatesTokenCount?: number }
+          | undefined;
+        let costCents: number;
+        if (usage?.promptTokenCount && usage?.candidatesTokenCount) {
+          costCents = estimateLlmCost(usage.promptTokenCount, usage.candidatesTokenCount);
+          console.log(
+            `[image-edit] Token-based cost: ${usage.promptTokenCount} input + ${usage.candidatesTokenCount} output tokens = ${costCents}¢`,
+          );
+        } else {
+          // Fallback: estimate tokens from prompt text + conservative output estimate
+          const estimatedInput = estimateTokensFromText(enforcementPrompt);
+          const estimatedOutput = 1200; // conservative estimate for image-edit responses
+          costCents = estimateLlmCost(estimatedInput, estimatedOutput);
+          console.warn(
+            `[image-edit] usageMetadata missing — fallback cost estimate: ~${estimatedInput} input + ${estimatedOutput} output tokens = ${costCents}¢`,
+          );
+        }
+        const newTotal = await spendRedis.incrby(spendKey, costCents);
+        // Set TTL when the key is first created (newTotal <= costCents means this was the first increment)
+        if (newTotal <= costCents) {
           await spendRedis.expire(spendKey, SPEND_KEY_TTL_SECONDS);
         }
       } catch (err) {
