@@ -1,6 +1,14 @@
 import { readFileSync, existsSync } from "fs";
 import * as path from "path";
 import { GoogleGenAI } from "@google/genai";
+import { z } from "zod";
+
+const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
+
+const requestSchema = z.object({
+  imageBase64: z.string().min(1).max(14_000_000),
+  prompt: z.string().min(1).max(1000),
+});
 
 /**
  * Serverless API route for image editing with Gemini
@@ -30,16 +38,18 @@ loadEnvLocal();
 
 export async function POST(request: Request) {
   try {
-    // Parse request body
-    const body = await request.json();
-    const { imageBase64, prompt } = body;
+    // Parse and validate request body
+    const body: unknown = await request.json();
+    const parsed = requestSchema.safeParse(body);
 
-    if (!imageBase64 || !prompt) {
-      return new Response(JSON.stringify({ error: "Missing required fields: imageBase64 and prompt" }), {
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: "Invalid request" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       });
     }
+
+    const { imageBase64, prompt } = parsed.data;
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -51,10 +61,19 @@ export async function POST(request: Request) {
 
     const ai = new GoogleGenAI({ apiKey });
 
-    // Parse image data
+    // Parse image data and validate mimeType
     const mimeMatch = imageBase64.match(/^data:(image\/[a-zA-Z+]+);base64,/);
-    const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-    const cleanBase64 = imageBase64.replace(/^data:image\/(png|jpeg|webp|heic);base64,/, '');
+    const extractedMime = mimeMatch ? mimeMatch[1] : null;
+
+    if (!extractedMime || !(ALLOWED_MIME_TYPES as readonly string[]).includes(extractedMime)) {
+      return new Response(JSON.stringify({ error: "Invalid request" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const mimeType = extractedMime;
+    const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z+]+;base64,/, '');
 
     // Build enforcement prompt
     const enforcementPrompt = `TASK: Edit the provided image based on the USER INSTRUCTION below.
