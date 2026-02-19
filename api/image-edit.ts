@@ -128,20 +128,15 @@ USER INSTRUCTION: ${prompt}`;
           headers: { "Content-Type": "application/json" },
         });
       }
-      const debug = {
+      console.warn('[image-edit] No content from Gemini.', JSON.stringify({
         hasCandidates: !!response.candidates?.length,
         numCandidates: response.candidates?.length ?? 0,
         hasContent: !!candidate?.content,
         numParts: candidate?.content?.parts?.length ?? 0,
-        firstPartKeys: candidate?.content?.parts?.[0] ? Object.keys(candidate.content.parts[0] as object) : undefined,
         finishReason: fr,
-        hasResponseText: typeof resp.text === 'string' && resp.text.length > 0,
-        hasResponseData: typeof resp.data === 'string' && resp.data.length > 0,
-      };
-      console.warn('[image-edit] No content from Gemini. Debug:', JSON.stringify(debug));
+      }));
       return new Response(JSON.stringify({
         error: "No content generated from Gemini API. The model returned no image or text. Try a different prompt or image.",
-        debug: process.env.NODE_ENV !== 'production' ? debug : undefined,
       }), {
         status: 500,
         headers: { "Content-Type": "application/json" },

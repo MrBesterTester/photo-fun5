@@ -12,7 +12,7 @@ This project follows the **Dylan Davis 50+ method** with three core documents:
 The project supports multiple document sets using a prefix convention:
 - **Default**: `docs/SPECIFICATION.md`, `docs/BLUEPRINT.md`, `docs/TODO.md`
 - **Prefixed**: `docs/{prefix}-SPECIFICATION.md`, `docs/{prefix}-BLUEPRINT.md`, `docs/{prefix}-TODO.md`
-- **Current prefixed set**: _(none active)_
+- **Current prefixed set**: `SECURITY-` → `docs/SECURITY-SPECIFICATION.md`, `docs/SECURITY-BLUEPRINT.md`, `docs/SECURITY-TODO.md`
 
 ## When User Says "Continue" or "Continue with Step X.Y"
 

@@ -1,0 +1,44 @@
+---
+id: REQ-003
+title: "Add gitleaks to CI"
+status: pending
+created_at: 2026-02-19T12:00:00Z
+user_request: UR-001
+related: [REQ-001, REQ-002, REQ-004, REQ-005, REQ-006, REQ-007]
+batch: "SECURITY-step-3"
+source_step: "3"
+source_doc: "docs/SECURITY-TODO.md"
+blueprint_ref: "docs/SECURITY-BLUEPRINT.md"
+model_hint: "Sonnet 4"
+---
+
+# Add gitleaks to CI (Step 3)
+
+## What
+Add a gitleaks secret scanning step to the GitHub Actions CI workflow using the official `gitleaks/gitleaks-action` action, matching samkirk-v3's secret scanning gate.
+
+## Checklist
+- [ ] 3.1 Add gitleaks step to `.github/workflows/ci.yml`
+- [ ] 3.2 Use `gitleaks/gitleaks-action` GitHub Action
+- [ ] 3.3 Validate: push test commit, confirm gitleaks step runs green
+
+## Blueprint Guidance
+**Requirement:** R6
+**Model:** Sonnet 4 (quick fix)
+**Files:** `.github/workflows/ci.yml`
+
+3.1. Add a gitleaks step to the existing CI workflow
+3.2. Use the official `gitleaks/gitleaks-action` GitHub Action
+3.3. Run on push and pull_request events (same as existing CI triggers)
+3.4. Validate: push a test commit, confirm gitleaks step runs green
+
+## Context
+- **Document set**: SECURITY
+- **Specification**: See docs/SECURITY-SPECIFICATION.md for full requirements (R6: Add gitleaks to CI)
+- **Model recommendation**: Sonnet 4 (advisory — use if your tool supports model selection)
+
+## Dependencies
+Independent of other steps. Can be done in parallel with Steps 1 and 2.
+
+---
+*Source: docs/SECURITY-TODO.md, Step 3*
