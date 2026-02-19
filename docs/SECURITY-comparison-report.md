@@ -267,3 +267,9 @@ samkirk-v3's security posture is production-grade. These are minor hardening ite
 
 1. **Add explicit CSP headers** -- neither project defines a Content Security Policy
 2. **Consider HSTS preload** -- both domains should submit for HSTS preload lists
+
+---
+
+## Follow-Up
+
+All 6 primary recommendations were implemented on 2026-02-19 (REQ-001 through REQ-008). See [SECURITY-comparison-report_2.md](SECURITY-comparison-report_2.md) for the post-hardening audit.
