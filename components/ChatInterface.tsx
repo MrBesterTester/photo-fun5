@@ -2,8 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Message, Role } from '../types';
 import { PRESETS } from '../constants';
 
-// Replace with your actual reCAPTCHA v2 site key from https://www.google.com/recaptcha/admin
-const RECAPTCHA_SITE_KEY = '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'; // Google test key — replace in production
+const RECAPTCHA_SITE_KEY = '6Le3wV4sAAAAAP__NFQlzvSI56A7mqjPdLR9SxM4';
 
 interface ChatInterfaceProps {
   messages: Message[];

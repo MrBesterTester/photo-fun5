@@ -1,10 +1,10 @@
 ---
 id: REQ-009
 title: Configure production reCAPTCHA
-status: failed
+status: completed
 claimed_at: 2026-02-19T19:00:00Z
 route: A
-error: "Requires human action — production reCAPTCHA keys must be obtained from Google console, set in Vercel env vars, and frontend test key replaced"
+completed_at: 2026-02-19T19:30:00Z
 created_at: 2026-02-19T18:00:00Z
 user_request: UR-003
 related: [REQ-004, REQ-012]
@@ -45,38 +45,18 @@ Rationale: This is a manual ops task. The code already references `process.env.R
 
 ## Implementation Summary
 
-**This REQ requires manual human action.** The following steps must be completed by the user:
+Completed with guided human-in-the-loop workflow:
 
-### What's already in place
-- Backend (`api/image-edit.ts:96`) already reads `process.env.RECAPTCHA_SECRET_KEY`
-- Frontend (`components/ChatInterface.tsx:6`) has hardcoded Google test site key: `6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI`
+1. **reCAPTCHA console** — Existing site (samkirk.com, v2 Checkbox) already had correct domain allowlist: `samkirk.com`, `localhost`, `samkirk-com-v3.vercel.app`, `vercel.app`
+2. **Frontend site key** — Updated `components/ChatInterface.tsx:6` from Google test key to production site key
+3. **Vercel secret key** — Set `RECAPTCHA_SECRET_KEY` via `vercel env add` across Production, Preview, Development environments
+4. **Vercel project re-linked** — `vercel link --yes --scope sam-kirks-projects`
 
-### Steps for the user
-
-1. **Google reCAPTCHA Console** — Go to https://www.google.com/recaptcha/admin and either create a new site or use an existing one:
-   - Type: reCAPTCHA v3
-   - Add your production domain(s) to the allowlist
-
-2. **Get production keys** from the console:
-   - **Site Key** (public, goes in frontend code)
-   - **Secret Key** (private, goes in Vercel env var)
-
-3. **Set Vercel env var:**
-   ```
-   vercel env add RECAPTCHA_SECRET_KEY production
-   ```
-   Paste the Secret Key (strip any trailing newline).
-
-4. **Update frontend site key** in `components/ChatInterface.tsx:6`:
-   Replace the test key with your production Site Key.
-
-5. **Redeploy** to pick up the new env var.
-
-*Completed by work action (Route A) — marked as failed because it requires human action*
+*Completed by work action (Route A) with human-in-the-loop*
 
 ## Testing
 
-**Tests run:** N/A — manual configuration task
-**Result:** Cannot be verified programmatically until keys are in place. REQ-012 (integration testing) will validate the full flow.
+**Tests run:** `npx tsc --noEmit` — passes
+**Result:** Code change verified. Full integration validation deferred to REQ-012.
 
 *Verified by work action*
