@@ -46,8 +46,8 @@ let ratelimit: Ratelimit | null = null;
 if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
   ratelimit = new Ratelimit({
     redis: new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      url: process.env.UPSTASH_REDIS_REST_URL.trim(),
+      token: process.env.UPSTASH_REDIS_REST_TOKEN.trim(),
     }),
     limiter: Ratelimit.slidingWindow(10, "600 s"), // 10 requests per 10 minutes
     prefix: "@upstash/ratelimit:image-edit",
@@ -87,8 +87,8 @@ function estimateTokensFromText(text: string): number {
 let spendRedis: Redis | null = null;
 if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
   spendRedis = new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    url: process.env.UPSTASH_REDIS_REST_URL.trim(),
+    token: process.env.UPSTASH_REDIS_REST_TOKEN.trim(),
   });
 } else {
   console.warn("[image-edit] UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN not set — spend tracking disabled");
@@ -96,7 +96,7 @@ if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) 
 
 /** Verify reCAPTCHA token with Google's siteverify API. Returns true if valid. */
 async function verifyCaptcha(token: string): Promise<boolean> {
-  const secret = process.env.RECAPTCHA_SECRET_KEY;
+  const secret = process.env.RECAPTCHA_SECRET_KEY?.trim();
   if (!secret) {
     console.error("[image-edit] RECAPTCHA_SECRET_KEY is not configured");
     return false;
@@ -176,7 +176,7 @@ export async function POST(request: Request) {
       console.warn("[image-edit] spendRedis not configured — spend cap check skipped");
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY?.trim();
     if (!apiKey) {
       return new Response(JSON.stringify({ error: "Gemini API key is not configured on the server" }), {
         status: 500,
