@@ -1,10 +1,10 @@
 ---
 id: REQ-010
 title: Provision Upstash Redis via Vercel Marketplace
-status: failed
+status: completed
 claimed_at: 2026-02-19T19:05:00Z
 route: A
-error: "Requires human action — Upstash Redis must be provisioned via Vercel Marketplace dashboard, then env vars verified"
+completed_at: 2026-02-19T19:35:00Z
 created_at: 2026-02-19T18:00:00Z
 user_request: UR-003
 related: [REQ-005, REQ-006, REQ-012]
@@ -48,40 +48,24 @@ Rationale: No code changes needed. The existing `@upstash/redis` and `@upstash/r
 
 ## Implementation Summary
 
-**This REQ requires manual human action.** No code changes needed.
+Completed with guided human-in-the-loop workflow:
 
-### Current state
-- Code in `api/image-edit.ts` already uses `@upstash/redis` and `@upstash/ratelimit`
-- Both degrade to pass-through when credentials are missing
-- Vercel project link may need re-linking (`vercel link`)
+1. **Vercel project re-linked** — `vercel link --yes --scope sam-kirks-projects` (done in REQ-009)
+2. **Upstash Redis provisioned** via Vercel Marketplace Storage tab → Upstash → Redis
+   - Database name: `upstash-photo-fun`
+   - Connected to `photo-fun5` project (Development, Preview, Production)
+   - Custom prefix `UPSTASH_REDIS_REST` used — created vars with `UPSTASH_REDIS_REST_KV_REST_API_*` naming
+3. **Env var name mismatch fixed** — Marketplace prefix prepended to default names (e.g. `UPSTASH_REDIS_REST_KV_REST_API_URL`) instead of replacing them. Used `vercel env pull` to extract values, then created correctly-named vars:
+   - `UPSTASH_REDIS_REST_URL` (Production)
+   - `UPSTASH_REDIS_REST_TOKEN` (Production)
+4. **SDK already installed** — `@upstash/redis` and `@upstash/ratelimit` in `package.json`, imported in `api/image-edit.ts`
+5. **No code changes needed** — existing code will pick up credentials and enable rate limiting + spend cap
 
-### Steps for the user
-
-1. **Fix Vercel project link** (if needed):
-   ```
-   vercel link
-   ```
-
-2. **Add Upstash Redis from Vercel Marketplace:**
-   - Go to your Vercel project dashboard → Integrations
-   - Add Upstash Redis from https://vercel.com/marketplace/upstash
-   - Vercel auto-provisions the account (no separate Upstash sign-up)
-
-3. **Verify env vars are populated:**
-   ```
-   vercel env ls | grep UPSTASH
-   ```
-   Should show `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`
-
-4. **Redeploy** to pick up the new env vars.
-
-5. **Verify** rate limiting and spend cap are active (no more pass-through warnings in logs).
-
-*Completed by work action (Route A) — marked as failed because it requires human action*
+*Completed by work action (Route A) with human-in-the-loop*
 
 ## Testing
 
-**Tests run:** N/A — manual provisioning task
-**Result:** REQ-012 (integration testing) will validate the full rate-limiting and spend-cap flow once credentials are in place.
+**Tests run:** `vercel env ls` — confirmed `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` present for Production
+**Result:** Env vars verified. Full integration validation deferred to REQ-012.
 
 *Verified by work action*
