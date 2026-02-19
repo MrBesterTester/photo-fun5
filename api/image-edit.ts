@@ -56,6 +56,23 @@ if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) 
   console.warn("[image-edit] UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN not set — rate limiting disabled");
 }
 
+// --- Spend cap (Upstash Redis, monthly cumulative) ---
+// Tracks cumulative estimated Gemini API spend per calendar month.
+// If env vars are missing, spend tracking is disabled and requests pass through.
+const MONTHLY_SPEND_CAP_CENTS = parseInt(process.env.MONTHLY_SPEND_CAP_CENTS || "2000", 10);
+const SPEND_PER_REQUEST_CENTS = 5; // conservative flat estimate per Gemini image-edit call
+const SPEND_KEY_TTL_SECONDS = 35 * 24 * 60 * 60; // 35 days — auto-expire after month rollover
+
+let spendRedis: Redis | null = null;
+if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  spendRedis = new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN,
+  });
+} else {
+  console.warn("[image-edit] UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN not set — spend tracking disabled");
+}
+
 /** Verify reCAPTCHA token with Google's siteverify API. Returns true if valid. */
 async function verifyCaptcha(token: string): Promise<boolean> {
   const secret = process.env.RECAPTCHA_SECRET_KEY;
@@ -116,6 +133,26 @@ export async function POST(request: Request) {
           },
         });
       }
+    }
+
+    // Spend cap check — refuse requests if monthly budget is exhausted
+    if (spendRedis) {
+      const now = new Date();
+      const spendKey = `spend:${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+      try {
+        const currentSpend = await spendRedis.get<number>(spendKey);
+        if (currentSpend !== null && currentSpend >= MONTHLY_SPEND_CAP_CENTS) {
+          console.warn(`[image-edit] Monthly spend cap reached: ${currentSpend} cents >= ${MONTHLY_SPEND_CAP_CENTS} cents`);
+          return new Response(
+            JSON.stringify({ error: "Service temporarily unavailable — monthly usage limit reached" }),
+            { status: 503, headers: { "Content-Type": "application/json" } },
+          );
+        }
+      } catch (err) {
+        console.error("[image-edit] Spend cap check failed (allowing request through):", err);
+      }
+    } else {
+      console.warn("[image-edit] spendRedis not configured — spend cap check skipped");
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -227,6 +264,21 @@ USER INSTRUCTION: ${prompt}`;
         status: 500,
         headers: { "Content-Type": "application/json" },
       });
+    }
+
+    // Increment monthly spend counter after successful Gemini response
+    if (spendRedis) {
+      const now = new Date();
+      const spendKey = `spend:${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+      try {
+        const newTotal = await spendRedis.incrby(spendKey, SPEND_PER_REQUEST_CENTS);
+        // Set TTL only when the key is first created (i.e. total equals first increment)
+        if (newTotal === SPEND_PER_REQUEST_CENTS) {
+          await spendRedis.expire(spendKey, SPEND_KEY_TTL_SECONDS);
+        }
+      } catch (err) {
+        console.error("[image-edit] Failed to increment spend counter:", err);
+      }
     }
 
     return new Response(JSON.stringify({ image: generatedImage, text: generatedText }), {
