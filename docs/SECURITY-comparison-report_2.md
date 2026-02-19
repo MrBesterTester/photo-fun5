@@ -133,7 +133,7 @@ These are design choices, not vulnerabilities. They would only become gaps if ph
 
 ## Production Readiness Checklist
 
-These env vars must be configured **before** REQ-007 (integration testing), since REQ-007 validates the full protection flow end-to-end and the protections gracefully degrade to pass-through when credentials are missing.
+These env vars must be configured **before** REQ-012 (integration testing), since REQ-012 validates the full protection flow end-to-end and the protections gracefully degrade to pass-through when credentials are missing.
 
 - [ ] Replace reCAPTCHA test key with production key in Vercel env (`RECAPTCHA_SECRET_KEY`)
 - [ ] Add production domain to Google reCAPTCHA console allowlist

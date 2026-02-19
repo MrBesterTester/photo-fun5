@@ -10,7 +10,7 @@ word_count: 53
 
 ## Summary
 
-User requested capture of the Production Readiness Checklist from docs/SECURITY-comparison-report_2.md. These are env var configuration tasks that must be completed before REQ-007 (integration testing).
+User requested capture of the Production Readiness Checklist from docs/SECURITY-comparison-report_2.md. These are env var configuration tasks that must be completed before REQ-012 (integration testing).
 
 ## Extracted Requests
 
@@ -22,7 +22,7 @@ User requested capture of the Production Readiness Checklist from docs/SECURITY-
 
 ## Notes
 
-Item 5 from the checklist ("Test all error paths in staging") overlaps with existing REQ-007 (integration testing) and was not captured as a separate REQ.
+Item 5 from the checklist ("Test all error paths in staging") overlaps with existing REQ-012 (integration testing) and was not captured as a separate REQ.
 
 ## Full Verbatim Input
 

@@ -2,7 +2,7 @@
 id: UR-001
 title: "Ingest: SECURITY TODO (7 steps)"
 created_at: 2026-02-19T12:00:00Z
-requests: [REQ-001, REQ-002, REQ-003, REQ-004, REQ-005, REQ-006, REQ-007]
+requests: [REQ-001, REQ-002, REQ-003, REQ-004, REQ-005, REQ-006, REQ-012]
 word_count: 474
 ---
 
@@ -22,7 +22,7 @@ Document set: SECURITY-SPECIFICATION.md, SECURITY-BLUEPRINT.md, SECURITY-TODO.md
 | REQ-004 | 4 | Add reCAPTCHA | Opus 4.5 |
 | REQ-005 | 5 | Add Server-Side Rate Limiting | Opus 4.5 |
 | REQ-006 | 6 | Add Hard Spend Cap | Opus 4.5 |
-| REQ-007 | 7 | Integration Testing and Validation | Gemini 3 Pro |
+| REQ-012 | 7 | Integration Testing and Validation | Gemini 3 Pro |
 
 ## Full Verbatim Input
 

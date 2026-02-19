@@ -1,10 +1,10 @@
 ---
-id: REQ-007
+id: REQ-012
 title: "Integration Testing and Validation"
 status: pending
 created_at: 2026-02-19T12:00:00Z
 user_request: UR-001
-related: [REQ-001, REQ-002, REQ-003, REQ-004, REQ-005, REQ-006]
+related: [REQ-001, REQ-002, REQ-003, REQ-004, REQ-005, REQ-006, REQ-009, REQ-010, REQ-011]
 batch: "SECURITY-step-7"
 source_step: "7"
 source_doc: "docs/SECURITY-TODO.md"
