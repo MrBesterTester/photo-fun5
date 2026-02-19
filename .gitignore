@@ -31,3 +31,6 @@ dist-ssr
 # OS files
 Thumbs.db
 .vercel
+
+# Security audit docs (kept locally, not published to public repo)
+docs/SECURITY-*

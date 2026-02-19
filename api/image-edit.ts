@@ -63,9 +63,12 @@ if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) 
 const MONTHLY_SPEND_CAP_CENTS = parseInt(process.env.MONTHLY_SPEND_CAP_CENTS || "2000", 10);
 const SPEND_KEY_TTL_SECONDS = 35 * 24 * 60 * 60; // 35 days — auto-expire after month rollover
 
-// Token-based pricing for Gemini image-edit model
-const COST_PER_1K_INPUT_TOKENS_USD = 0.00125;   // $1.25/1M input tokens
-const COST_PER_1K_OUTPUT_TOKENS_USD = 0.00375;   // $3.75/1M output tokens
+// Token-based pricing for gemini-3-pro-image-preview (≤200K context)
+// Source: https://ai.google.dev/gemini-api/docs/pricing
+// Note: image output is $120/1M but usageMetadata doesn't split text vs image
+// tokens, so we use the text output rate ($12/1M) as a conservative lower bound.
+const COST_PER_1K_INPUT_TOKENS_USD = 0.002;      // $2.00/1M input tokens
+const COST_PER_1K_OUTPUT_TOKENS_USD = 0.012;      // $12.00/1M output tokens
 const MIN_COST_PER_REQUEST_CENTS = 1;             // 1 cent minimum floor
 
 /** Estimate LLM cost from token counts; returns cost in whole cents (rounded up). */
