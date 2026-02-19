@@ -7,7 +7,10 @@
     "dev": "vite",
     "dev:vercel": "NODE_OPTIONS='--no-deprecation' vercel dev",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node scripts/test-security.mjs --static",
+    "test:api": "node scripts/test-security.mjs --api",
+    "test:all": "node scripts/test-security.mjs --all"
   },
   "dependencies": {
     "@google/genai": "latest",

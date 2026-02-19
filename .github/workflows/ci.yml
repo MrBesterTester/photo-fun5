@@ -29,6 +29,9 @@ jobs:
       - name: Build application
         run: npm run build
 
+      - name: Run security tests (static)
+        run: npm test
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
