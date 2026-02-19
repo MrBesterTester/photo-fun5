@@ -3,17 +3,18 @@
 **Benchmarked against:** samkirk-v3 (production-grade reference implementation)
 **Date:** 2026-02-19
 **Previous audit:** [SECURITY-comparison-report.md](SECURITY-comparison-report.md) (2026-02-18)
-**Changes:** REQ-001 through REQ-008
+**Changes:** REQ-001 through REQ-011
 
 ---
 
 ## Executive Summary
 
-All 6 primary recommendations from the 2026-02-18 audit have been implemented. photo-fun5 now has a multi-layered protection stack (Zod validation -> reCAPTCHA -> rate limit -> spend cap) comparable to samkirk-v3's defense-in-depth approach. The remaining differences are architectural choices appropriate for photo-fun5's single-route, stateless SPA design.
+All 6 primary recommendations from the 2026-02-18 audit have been implemented and production credentials are now configured. photo-fun5 has a multi-layered protection stack (Zod validation -> reCAPTCHA -> rate limit -> spend cap) comparable to samkirk-v3's defense-in-depth approach. All protections are live with production credentials — no more pass-through degradation. The remaining differences are architectural choices appropriate for photo-fun5's single-route, stateless SPA design.
 
 | | samkirk-v3 | photo-fun5 (before) | photo-fun5 (after) |
 |---|---|---|---|
-| **Overall posture** | Production-grade, defense-in-depth | Minimal, platform-reliant | **Defense-in-depth, at parity** |
+| **Overall posture** | Production-grade, defense-in-depth | Minimal, platform-reliant | **Production-grade, defense-in-depth** |
+| **Credential status** | All production | N/A | **All production** |
 
 ---
 
@@ -21,9 +22,9 @@ All 6 primary recommendations from the 2026-02-18 audit have been implemented. p
 
 | # | Recommendation | REQ | Status |
 |---|---|---|---|
-| 1 | reCAPTCHA with server-side verification | REQ-004 | **Done** |
-| 2 | Server-side rate limiting with persistent storage | REQ-005 | **Done** |
-| 3 | Hard spend cap enforced in API route | REQ-006, REQ-008 | **Done** |
+| 1 | reCAPTCHA with server-side verification | REQ-004, REQ-009 | **Done + Production key configured** |
+| 2 | Server-side rate limiting with persistent storage | REQ-005, REQ-010 | **Done + Upstash Redis provisioned** |
+| 3 | Hard spend cap enforced in API route | REQ-006, REQ-008, REQ-011 | **Done + Cap confirmed ($20/mo)** |
 | 4 | Input validation with Zod | REQ-002 | **Done** |
 | 5 | Remove debug info leak | REQ-001 | **Done** |
 | 6 | gitleaks in CI | REQ-003 | **Done** |
@@ -41,7 +42,7 @@ All 6 primary recommendations from the 2026-02-18 audit have been implemented. p
 | **Server-side** | Google siteverify API | Google siteverify in `api/image-edit.ts` (returns 403) |
 | **Schema** | Zod validated | `captchaToken: z.string().min(1)` |
 
-**Production note:** Currently using Google's test key. Production key must be set as `RECAPTCHA_SECRET_KEY` in Vercel env vars with production domain in Google console allowlist.
+**Production status (REQ-009):** Production site key set in `ChatInterface.tsx`. Production secret key set as `RECAPTCHA_SECRET_KEY` in Vercel (all environments). Domain allowlist configured in Google reCAPTCHA console: `samkirk.com`, `localhost`, `samkirk-com-v3.vercel.app`, `vercel.app`.
 
 ### 2. Rate Limiting (REQ-005)
 
@@ -53,6 +54,8 @@ All 6 primary recommendations from the 2026-02-18 audit have been implemented. p
 | **Response** | 429 | 429 with `Retry-After` header |
 | **Vercel WAF** | 5 req / 600s per IP | 5 req / 600s per IP |
 
+**Production status (REQ-010):** Upstash Redis provisioned via Vercel Marketplace (`upstash-photo-fun`). `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` set in Vercel production. Rate limiting is live.
+
 ### 3. Spend Cap (REQ-006, REQ-008)
 
 | | samkirk-v3 | photo-fun5 |
@@ -62,6 +65,8 @@ All 6 primary recommendations from the 2026-02-18 audit have been implemented. p
 | **Granularity** | Monthly | Monthly (key: `spend:{YYYY-MM}`, 35-day TTL) |
 | **Default cap** | Configurable | $20/mo (`MONTHLY_SPEND_CAP_CENTS` env var) |
 | **Atomicity** | Firestore transactions | Redis `incrby` (atomic) |
+
+**Production status (REQ-011):** `MONTHLY_SPEND_CAP_CENTS=2000` set explicitly in Vercel production. Spend cap enforcement is live.
 
 ### 4. Input Validation (REQ-002)
 
@@ -133,10 +138,20 @@ These are design choices, not vulnerabilities. They would only become gaps if ph
 
 ## Production Readiness Checklist
 
-These env vars must be configured **before** REQ-012 (integration testing), since REQ-012 validates the full protection flow end-to-end and the protections gracefully degrade to pass-through when credentials are missing.
+All credential configuration is complete. REQ-012 (integration testing) can now validate the full protection flow end-to-end with real credentials.
 
-- [ ] Replace reCAPTCHA test key with production key in Vercel env (`RECAPTCHA_SECRET_KEY`)
-- [ ] Add production domain to Google reCAPTCHA console allowlist
-- [ ] Verify Upstash Redis credentials in Vercel env (`UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`)
-- [ ] Confirm `MONTHLY_SPEND_CAP_CENTS` value is appropriate
-- [ ] Test all error paths in staging (invalid CAPTCHA -> 403, rate limit -> 429, spend cap -> 503)
+- [x] Replace reCAPTCHA test key with production key in Vercel env (`RECAPTCHA_SECRET_KEY`) — **REQ-009**
+- [x] Add production domain to Google reCAPTCHA console allowlist — **REQ-009**
+- [x] Verify Upstash Redis credentials in Vercel env (`UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`) — **REQ-010**
+- [x] Confirm `MONTHLY_SPEND_CAP_CENTS` value is appropriate ($20/mo = 2000 cents) — **REQ-011**
+- [ ] Test all error paths in staging (invalid CAPTCHA -> 403, rate limit -> 429, spend cap -> 503) — **REQ-012**
+
+### Vercel Environment Variables (current state)
+
+| Variable | Environments | Status |
+|---|---|---|
+| `GEMINI_API_KEY` | Development, Preview, Production | Set |
+| `RECAPTCHA_SECRET_KEY` | Production, Preview, Development | Set (production key) |
+| `UPSTASH_REDIS_REST_URL` | Production | Set |
+| `UPSTASH_REDIS_REST_TOKEN` | Production | Set |
+| `MONTHLY_SPEND_CAP_CENTS` | Production | Set (2000) |
