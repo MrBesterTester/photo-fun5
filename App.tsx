@@ -133,7 +133,7 @@ const App: React.FC = () => {
     document.body.removeChild(link);
   }, [currentImage]);
 
-  const handleSendMessage = async (text: string) => {
+  const handleSendMessage = async (text: string, captchaToken?: string) => {
     if (requestCount >= MAX_SESSION_REQUESTS) {
        setMessages(prev => [...prev, { id: Date.now().toString(), role: Role.MODEL, text: ERROR_MESSAGES.quota, timestamp: Date.now() }]);
        return;
@@ -144,13 +144,15 @@ const App: React.FC = () => {
     setRequestCount(prev => prev + 1);
 
     try {
-      const { image, text: responseText } = await editImageWithGemini(currentImage!, text);
+      const { image, text: responseText } = await editImageWithGemini(currentImage!, text, captchaToken);
       if (image) setCurrentImage(image);
       setMessages(prev => [...prev, { id: Date.now().toString(), role: Role.MODEL, text: responseText || "Transformation complete!", timestamp: Date.now() }]);
     } catch (error: any) {
       const err = error?.message || error?.toString?.() || String(error);
       // Handle API route errors
-      if (err.includes("Invalid or missing API key") || err.includes("Requested entity was not found")) {
+      if (err.includes("CAPTCHA verification failed") || err.includes("CAPTCHA token")) {
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: Role.MODEL, text: "CAPTCHA verification failed. Please complete the CAPTCHA and try again.", timestamp: Date.now() }]);
+      } else if (err.includes("Invalid or missing API key") || err.includes("Requested entity was not found")) {
         setApiKeyVerified(false);
         setMessages(prev => [...prev, { id: Date.now().toString(), role: Role.MODEL, text: "API key not configured on server. Please configure GEMINI_API_KEY in Vercel project settings.", timestamp: Date.now() }]);
       } else if (err.includes("Rate limit exceeded")) {

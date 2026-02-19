@@ -8,6 +8,7 @@ const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"
 const requestSchema = z.object({
   imageBase64: z.string().min(1).max(14_000_000),
   prompt: z.string().min(1).max(1000),
+  captchaToken: z.string().min(1),
 });
 
 /**
@@ -36,6 +37,27 @@ function loadEnvLocal(): void {
 }
 loadEnvLocal();
 
+/** Verify reCAPTCHA token with Google's siteverify API. Returns true if valid. */
+async function verifyCaptcha(token: string): Promise<boolean> {
+  const secret = process.env.RECAPTCHA_SECRET_KEY;
+  if (!secret) {
+    console.error("[image-edit] RECAPTCHA_SECRET_KEY is not configured");
+    return false;
+  }
+  try {
+    const response = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `secret=${encodeURIComponent(secret)}&response=${encodeURIComponent(token)}`,
+    });
+    const data = (await response.json()) as { success: boolean };
+    return data.success === true;
+  } catch (err) {
+    console.error("[image-edit] reCAPTCHA verification request failed:", err);
+    return false;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     // Parse and validate request body
@@ -49,7 +71,16 @@ export async function POST(request: Request) {
       });
     }
 
-    const { imageBase64, prompt } = parsed.data;
+    const { imageBase64, prompt, captchaToken } = parsed.data;
+
+    // Verify reCAPTCHA token before proceeding
+    const captchaValid = await verifyCaptcha(captchaToken);
+    if (!captchaValid) {
+      return new Response(JSON.stringify({ error: "CAPTCHA verification failed" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {

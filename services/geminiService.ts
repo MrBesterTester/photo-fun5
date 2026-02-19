@@ -3,8 +3,9 @@
  * API key is kept secure on the server side
  */
 export const editImageWithGemini = async (
-  imageBase64: string, 
-  prompt: string
+  imageBase64: string,
+  prompt: string,
+  captchaToken?: string
 ): Promise<{ image?: string; text?: string }> => {
   try {
     const response = await fetch('/api/image-edit', {
@@ -15,21 +16,25 @@ export const editImageWithGemini = async (
       body: JSON.stringify({
         imageBase64,
         prompt,
+        captchaToken: captchaToken || '',
       }),
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: response.statusText }));
       const errorMessage = errorData.error || `API request failed with status ${response.status}`;
-      
+
       // Handle specific error cases
       if (response.status === 401) {
         throw new Error('Invalid or missing API key on server');
       }
+      if (response.status === 403) {
+        throw new Error('CAPTCHA verification failed. Please complete the CAPTCHA and try again.');
+      }
       if (response.status === 429) {
         throw new Error('Rate limit exceeded. Please try again later.');
       }
-      
+
       throw new Error(errorMessage);
     }
 

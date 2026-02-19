@@ -1,11 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Message, Role } from '../types';
 import { PRESETS } from '../constants';
+
+// Replace with your actual reCAPTCHA v2 site key from https://www.google.com/recaptcha/admin
+const RECAPTCHA_SITE_KEY = '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'; // Google test key — replace in production
 
 interface ChatInterfaceProps {
   messages: Message[];
   isProcessing: boolean;
-  onSendMessage: (text: string) => void;
+  onSendMessage: (text: string, captchaToken: string) => void;
   showImageControls?: boolean;
   onReset?: () => void;
   onReplaceImage?: () => void;
@@ -15,17 +18,66 @@ interface ChatInterfaceProps {
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, isProcessing, onSendMessage, showImageControls, onReset, onReplaceImage, onOpenCamera, onSave }) => {
   const [input, setInput] = useState('');
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const captchaContainerRef = useRef<HTMLDivElement>(null);
+  const captchaWidgetId = useRef<number | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Render the reCAPTCHA widget once the container is mounted and the API is loaded
+  useEffect(() => {
+    if (!captchaContainerRef.current) return;
+    const container = captchaContainerRef.current;
+
+    const renderCaptcha = () => {
+      // Avoid double-rendering
+      if (captchaWidgetId.current !== null) return;
+      captchaWidgetId.current = grecaptcha.render(container, {
+        sitekey: RECAPTCHA_SITE_KEY,
+        callback: (token: string) => setCaptchaToken(token),
+        'expired-callback': () => setCaptchaToken(null),
+        'error-callback': () => setCaptchaToken(null),
+        theme: 'dark',
+      });
+    };
+
+    // The reCAPTCHA script may or may not be loaded yet (async defer)
+    if (typeof grecaptcha !== 'undefined' && typeof grecaptcha.render === 'function') {
+      renderCaptcha();
+    } else {
+      // Poll until the API is ready (script is loading async)
+      const interval = setInterval(() => {
+        if (typeof grecaptcha !== 'undefined' && typeof grecaptcha.render === 'function') {
+          clearInterval(interval);
+          renderCaptcha();
+        }
+      }, 200);
+      return () => clearInterval(interval);
+    }
+  }, []);
+
+  const resetCaptcha = useCallback(() => {
+    setCaptchaToken(null);
+    if (captchaWidgetId.current !== null) {
+      try { grecaptcha.reset(captchaWidgetId.current); } catch (_) { /* ignore if not ready */ }
+    }
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isProcessing) return;
-    onSendMessage(input);
+    if (!input.trim() || isProcessing || !captchaToken) return;
+    onSendMessage(input, captchaToken);
     setInput('');
+    resetCaptcha();
+  };
+
+  const handlePresetClick = (prompt: string) => {
+    if (!captchaToken) return;
+    onSendMessage(prompt, captchaToken);
+    resetCaptcha();
   };
 
   return (
@@ -82,8 +134,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, isProces
           {PRESETS.map((p) => (
             <button
               key={p.id}
-              onClick={() => onSendMessage(p.prompt)}
-              disabled={isProcessing}
+              onClick={() => handlePresetClick(p.prompt)}
+              disabled={isProcessing || !captchaToken}
               className="flex-shrink-0 px-4 py-2 rounded-xl bg-white/5 hover:bg-blue-600/20 border border-white/10 hover:border-blue-500/50 transition-all disabled:opacity-50"
             >
               <span className="text-xs font-bold text-slate-200">{p.label}</span>
@@ -127,7 +179,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, isProces
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="p-5 border-t border-white/10 bg-slate-900/40">
+      <div className="px-5 pt-4 border-t border-white/10 bg-slate-900/40">
+        <div ref={captchaContainerRef} className="flex justify-center mb-3" />
+        {!captchaToken && (
+          <p className="text-[10px] text-slate-500 text-center mb-2">Complete the CAPTCHA above to send a request</p>
+        )}
+      </div>
+      <form onSubmit={handleSubmit} className="px-5 pb-5 bg-slate-900/40">
         <div className="relative flex items-center">
           <input
             type="text"
@@ -139,7 +197,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, isProces
           />
           <button
             type="submit"
-            disabled={!input.trim() || isProcessing}
+            disabled={!input.trim() || isProcessing || !captchaToken}
             className="absolute right-2 p-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-0 transition-all"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
