@@ -34,3 +34,6 @@ Thumbs.db
 
 # Security audit docs (kept locally, not published to public repo)
 docs/SECURITY-*
+
+# Local ship status log
+STATUS.md

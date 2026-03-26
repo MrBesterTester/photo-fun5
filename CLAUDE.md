@@ -89,6 +89,26 @@ Remind the user which model is recommended for the current step:
 - **Claude in Chrome extension**: Use for UI debugging, visual inspection, and making code changes
 - **Chrome vs Chromium**: These are different browsers. Never confuse the two.
 
+### Chrome MCP Session Checklist (MANDATORY)
+
+Tab groups go stale across sessions and will silently break everything. Follow this checklist at the START of every browser automation session — no exceptions.
+
+1. **Verify the Chrome extension is logged in.** Puzzle piece icon → Claude extension → confirm login. If not logged in, nothing works and errors will be cryptic.
+2. **Start a fresh Claude Code session** if Chrome was restarted since last use. Old MCP connections do not survive Chrome restarts.
+3. **Call `tabs_context_mcp` first.** Always. Before any other browser tool. This confirms the connection is alive and shows what tabs exist.
+4. **Create new tabs with `tabs_create_mcp`.** Never reuse tab IDs from a previous session — they point to dead or invisible tabs.
+5. **Look for the colored "Claude" label** in Chrome's tab bar. If you see a white square instead, the tab group is stale/collapsed and you're working blind.
+
+### Chrome MCP Gotchas
+
+- **"No tab available" errors**: The extension lost connection. Re-run `tabs_context_mcp`. If that fails, the user needs to check the extension login and you may need `/reconnect-chrome`.
+- **"Frame with ID 0 is showing error page"**: The page didn't load. Common causes: wrong URL (e.g. `www.` prefix that doesn't resolve), DNS failure, Vercel Deployment Protection challenge. Check the actual URL — try without `www.` prefix.
+- **CDP timeout (45s limit)**: JavaScript execution via `javascript_tool` times out after 45 seconds. For long-running operations (e.g. multiple API calls with delays), store results in `window.__variableName` and return immediately, then read the variable in a separate call.
+- **Console messages**: `read_console_messages` can be flaky. Prefer storing results in `window.*` variables and reading them with `javascript_tool` over relying on console log capture.
+- **reCAPTCHA**: Claude cannot click "I'm not a robot" checkboxes — bot detection rules prohibit it. The user must handle CAPTCHA interactions manually.
+- **Vercel WAF rate limiting**: Rapid-fire requests to Vercel-hosted endpoints (even from the browser) will trigger Vercel's built-in WAF/DDoS protection (HTTP 429 with `sfo1::` IDs in the response body). This is NOT your application's rate limiter. The WAF blocklist can persist for 10+ minutes. Use delays between requests (15s+ for safety) and do not burst.
+- **Vercel Attack Challenge Mode**: After triggering WAF rate limits, Vercel may escalate to a full Security Checkpoint that requires JavaScript execution to pass. `curl` cannot pass this challenge. Use browser-based `fetch()` via `javascript_tool` instead, or wait hours for the blocklist to expire.
+
 ## Git Workflow
 
 - Push directly to `main` — no squash, no intermediate branches

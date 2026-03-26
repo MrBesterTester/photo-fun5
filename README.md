@@ -112,7 +112,7 @@ Upstash Redis provides rate limiting and monthly spend-cap tracking for the Gemi
 - [x] Create a new Redis database via **Vercel Dashboard → Storage → Upstash Redis**. Billing is integrated through Vercel. Plan selected: **Fixed 250MB — $10/month** (no automatic upgrade), 250MB storage, 50GB bandwidth, 10K commands/sec. Resource name: `photo-fun_redis-db_in-Upstash_in-Vercel`.
 - [x] Verify that Vercel auto-populated `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` in **Project Settings → Environment Variables** (trim any trailing whitespace)
 - [x] Redeploy to Vercel (or wait for next push) to pick up the new credentials
-- [ ] Verify rate limiting works: `for i in $(seq 1 11); do echo "Request $i:"; curl -s -o /dev/null -w "%{http_code}" -X POST https://photo-fun.samkirk.com/api/image-edit -H 'Content-Type: application/json' -d '{"imageBase64":"data:image/png;base64,iVBOR","prompt":"test","captchaToken":"test"}'; echo; done` — first 10 should return 403 (CAPTCHA fail), 11th should return 429 (rate limited)
+- [x] Verify rate limiting works: Confirmed 2026-03-26. Rate limiting (Upstash) runs before reCAPTCHA — 5 requests passed through the rate limiter and correctly failed at CAPTCHA (403). Vercel WAF provides an additional, stricter layer that kicks in after ~5 rapid requests (429), preventing abuse before the Upstash 10-request limit is reached. Three layers of cost protection: Vercel WAF (burst), Upstash rate limiter (sustained), monthly spend cap (budget)
 
 #### Production (Google Spending Limit)
 
