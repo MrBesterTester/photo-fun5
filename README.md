@@ -116,13 +116,13 @@ Upstash Redis provides rate limiting and monthly spend-cap tracking for the Gemi
 
 #### Production (Google Spending Limit)
 
-Google AI Studio now supports Project Spend Caps (announced 2026-03-16). Enforcement begins 2026-04-01.
+Google AI Studio now supports Project Spend Caps (announced 2026-03-16). Feature is live as of 2026-03-26 (marked "Experimental").
 
-- [ ] Open [Google AI Studio](https://aistudio.google.com/) and navigate to the project used for `GEMINI_API_KEY`
-- [ ] Go to Settings → Billing / Spend Caps (available after 2026-04-01 enforcement date)
-- [ ] Set a monthly spend cap (e.g., $20/month) — note: there is a ~10-minute enforcement delay, so brief overages are possible
-- [ ] Optionally set per-minute request quotas in [Google Cloud Console → APIs & Services → Gemini API → Quotas](https://console.cloud.google.com/) as an additional safeguard
-- [ ] Verify the cap appears in the AI Studio dashboard
+- [x] Open [Google AI Studio](https://aistudio.google.com/) and navigate to the project used for `GEMINI_API_KEY` (project: `photo-fun-dev`)
+- [x] Go to Spend page (left sidebar → Spend, or via "Create a spend cap" banner on Playground)
+- [x] Set a monthly spend cap of **$15/month** — note: there is a ~10-minute enforcement delay, so brief overages are possible. Resets on the first day of each month (PST).
+- [x] ~~Optionally set per-minute request quotas in Google Cloud Console~~ — skipped: Cloud Console has 1,700+ quota entries with poor filtering; the $15 spend cap + Upstash rate limiter + Vercel WAF provide sufficient protection
+- [x] Verify the cap appears in the AI Studio dashboard — confirmed: `$0.27 / $15.00`
 
 #### Troubleshooting
 
