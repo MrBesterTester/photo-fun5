@@ -130,16 +130,9 @@ export async function POST(request: Request) {
 
     const { imageBase64, prompt, captchaToken } = parsed.data;
 
-    // Verify reCAPTCHA token before proceeding
-    const captchaValid = await verifyCaptcha(captchaToken);
-    if (!captchaValid) {
-      return new Response(JSON.stringify({ error: "CAPTCHA verification failed" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
     // Rate limit by IP (sliding window: 10 req / 10 min)
+    // Checked before reCAPTCHA: cheaper (Redis) than a network call to Google,
+    // and prevents attackers from flooding reCAPTCHA verification quota.
     if (ratelimit) {
       const forwarded = request.headers.get("x-forwarded-for");
       const ip = forwarded ? forwarded.split(",")[0].trim() : "unknown";
@@ -154,6 +147,15 @@ export async function POST(request: Request) {
           },
         });
       }
+    }
+
+    // Verify reCAPTCHA token before proceeding
+    const captchaValid = await verifyCaptcha(captchaToken);
+    if (!captchaValid) {
+      return new Response(JSON.stringify({ error: "CAPTCHA verification failed" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     // Spend cap check — refuse requests if monthly budget is exhausted

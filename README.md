@@ -111,8 +111,8 @@ Upstash Redis provides rate limiting and monthly spend-cap tracking for the Gemi
 - [x] Add a credit card to your Vercel account (required for paid Upstash usage on the Hobby plan)
 - [x] Create a new Redis database via **Vercel Dashboard → Storage → Upstash Redis**. Billing is integrated through Vercel. Plan selected: **Fixed 250MB — $10/month** (no automatic upgrade), 250MB storage, 50GB bandwidth, 10K commands/sec. Resource name: `photo-fun_redis-db_in-Upstash_in-Vercel`.
 - [x] Verify that Vercel auto-populated `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` in **Project Settings → Environment Variables** (trim any trailing whitespace)
-- [ ] Redeploy to Vercel (or wait for next push) to pick up the new credentials
-- [ ] Verify rate limiting works: hit `/api/image-edit` 11 times in 10 minutes and confirm the 11th is rejected
+- [x] Redeploy to Vercel (or wait for next push) to pick up the new credentials
+- [ ] Verify rate limiting works: `for i in $(seq 1 11); do echo "Request $i:"; curl -s -o /dev/null -w "%{http_code}" -X POST https://photo-fun.samkirk.com/api/image-edit -H 'Content-Type: application/json' -d '{"imageBase64":"data:image/png;base64,iVBOR","prompt":"test","captchaToken":"test"}'; echo; done` — first 10 should return 403 (CAPTCHA fail), 11th should return 429 (rate limited)
 
 #### Production (Google Spending Limit)
 
